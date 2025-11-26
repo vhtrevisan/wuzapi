@@ -34,6 +34,12 @@ type ChatwootWebhookPayload struct {
 	Contact struct {
 		PhoneNumber string `json:"phone_number"`
 	} `json:"contact"`
+	Sender struct {
+		Type string `json:"type"` // "user" or "contact" or "agent_bot"
+	} `json:"sender"`
+	ContentAttributes struct {
+		InReplyTo string `json:"in_reply_to"`
+	} `json:"content_attributes"`
 }
 
 // respondJSON ensures all webhook responses are valid JSON
@@ -83,6 +89,7 @@ func (s *server) HandleChatwootWebhook() http.HandlerFunc {
 			Str("messageType", payload.MessageType).
 			Bool("private", payload.Private).
 			Str("content", payload.Content).
+			Str("senderType", payload.Sender.Type).
 			Msg("Chatwoot webhook payload received")
 
 		// 3. Validation
@@ -93,6 +100,14 @@ func (s *server) HandleChatwootWebhook() http.HandlerFunc {
 		if payload.MessageType != "outgoing" {
 			log.Debug().Str("messageType", payload.MessageType).Msg("Ignoring non-outgoing message")
 			respondJSON(w, http.StatusOK, map[string]string{"status": "ignored", "reason": "not outgoing"})
+			return
+		}
+		// CRITICAL: Ignore messages created by "contact" sender type
+		// When we forward WhatsApp messages to Chatwoot as "outgoing", Chatwoot fires a webhook back
+		// with sender.type = "contact". We must ignore these to prevent infinite loops!
+		if payload.Sender.Type == "contact" || payload.Sender.Type == "agent_bot" {
+			log.Debug().Str("senderType", payload.Sender.Type).Msg("Ignoring message from contact/bot to prevent loop")
+			respondJSON(w, http.StatusOK, map[string]string{"status": "ignored", "reason": "sender is contact/bot"})
 			return
 		}
 		if payload.Private {
