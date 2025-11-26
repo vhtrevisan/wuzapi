@@ -8,6 +8,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
+	"strings"
 )
 
 type Client struct {
@@ -59,6 +60,23 @@ type ContactResponse struct {
 	} `json:"payload"`
 }
 
+// formatToE164 converts WhatsApp JID to E.164 phone format
+// Removes @s.whatsapp.net, :22@... suffixes and ensures + prefix
+func formatToE164(jid string) string {
+	// Remove suffixes like @s.whatsapp.net or :22@...
+	if idx := strings.Index(jid, "@"); idx != -1 {
+		jid = jid[:idx]
+	}
+	if idx := strings.Index(jid, ":"); idx != -1 {
+		jid = jid[:idx]
+	}
+	// Add + prefix if not present
+	if !strings.HasPrefix(jid, "+") {
+		return "+" + jid
+	}
+	return jid
+}
+
 func NewClient(config Config) *Client {
 	return &Client{
 		Config: config,
@@ -67,6 +85,9 @@ func NewClient(config Config) *Client {
 }
 
 func (c *Client) EnsureContact(phone, name string) (int, error) {
+	// Format phone to E.164 standard
+	phone = formatToE164(phone)
+
 	// Search for contact
 	searchURL := fmt.Sprintf("%s/api/v1/accounts/%s/contacts/search?q=%s", c.Config.URL, c.Config.AccountID, phone)
 	req, err := http.NewRequest("GET", searchURL, nil)
@@ -383,6 +404,9 @@ func (c *Client) CreateInbox(name string, webhookURL string) (int, error) {
 
 // CreateContact creates a contact in Chatwoot (used for system bot)
 func (c *Client) CreateContact(name string, phone string) (int, error) {
+	// Format phone to E.164 standard
+	phone = formatToE164(phone)
+
 	url := fmt.Sprintf("%s/api/v1/accounts/%s/contacts", c.Config.URL, c.Config.AccountID)
 
 	payload := map[string]interface{}{
