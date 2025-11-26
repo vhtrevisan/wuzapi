@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"go.mau.fi/whatsmeow"
@@ -104,6 +105,15 @@ func (s *server) HandleChatwootWebhook() http.HandlerFunc {
 		// Format JID
 		phone = strings.TrimPrefix(phone, "+")
 		jid := types.NewJID(phone, types.DefaultUserServer)
+
+		// CRITICAL: Mark this chat as "currently sending via Chatwoot"
+		// This prevents re-forwarding the sent message back to Chatwoot
+		chatKey := fmt.Sprintf("%s:%s", userID, phone)
+		chatwootSentCache.Store(chatKey, time.Now())
+		go func(key string) {
+			time.Sleep(10 * time.Second) // Keep for 10 seconds
+			chatwootSentCache.Delete(key)
+		}(chatKey)
 
 		// 5. Get WhatsApp Client
 		client := clientManager.GetWhatsmeowClient(userID)

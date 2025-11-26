@@ -39,6 +39,9 @@ import (
 // Global message deduplication cache to prevent duplicate forwards
 var messageDedupeCache sync.Map
 
+// Cache for messages sent VIA Chatwoot webhook (to avoid re-forwarding them)
+var chatwootSentCache sync.Map
+
 var logger zerolog.Logger
 
 // db field declaration as *sqlx.DB
@@ -379,7 +382,21 @@ func (mycli *MyClient) handleChatwootForwarding(evt *events.Message) {
 		return
 	}
 
-	// 3. Ignora mensagens de Protocolo e Reações (Anti-Duplicação Real)
+	// 3. CRÍTICO: Ignora mensagens enviadas VIA CHATWOOT
+	// Quando enviamos pelo Chatwoot, marcamos no cache. Se detectar aqui, NÃO reencaminhar!
+	// Isso previne o loop: Chatwoot → WhatsApp → handleChatwootForwarding → Chatwoot
+	sender := evt.Info.Sender.User
+	if sender == "" {
+		sender = evt.Info.Chat.User
+	}
+	chatKey := fmt.Sprintf("%s:%s", mycli.userID, sender)
+	if _, sentViaChatwoot := chatwootSentCache.Load(chatKey); sentViaChatwoot {
+		// Esta mensagem foi enviada VIA Chatwoot, NÃO reencaminhar!
+		log.Debug().Str("sender", sender).Msg("Chatwoot: Ignoring message sent via Chatwoot webhook")
+		return
+	}
+
+	// 4. Ignora mensagens de Protocolo e Reações (Anti-Duplicação Real)
 	// Mensagens de protocolo (edições, revogações, histórico, chaves de criptografia)
 	// não devem criar tickets no Chatwoot
 	if evt.Message.GetProtocolMessage() != nil ||
