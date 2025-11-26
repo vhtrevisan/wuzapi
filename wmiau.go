@@ -350,6 +350,12 @@ func (s *server) connectOnStartup() {
 }
 
 func (mycli *MyClient) handleChatwootForwarding(evt *events.Message) {
+	// CRITICAL: Ignore messages sent by this instance to prevent duplication
+	// and sync issues. Only forward messages FROM other users TO this instance.
+	if evt.Info.IsFromMe {
+		return
+	}
+
 	cwConfig, err := mycli.s.GetChatwootConfig(mycli.userID)
 	if err != nil || cwConfig == nil || cwConfig.URL == "" {
 		return
@@ -388,10 +394,8 @@ func (mycli *MyClient) handleChatwootForwarding(evt *events.Message) {
 		return
 	}
 
+	// All messages forwarded to Chatwoot are "incoming" since we filter IsFromMe above
 	msgType := "incoming"
-	if evt.Info.IsFromMe {
-		msgType = "outgoing"
-	}
 
 	var media []byte
 	var mediaFilename string
