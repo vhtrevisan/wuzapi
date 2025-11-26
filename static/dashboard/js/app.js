@@ -761,7 +761,7 @@ function populateInstances(instances) {
               </div>
            </div>
            <div class="extra content">
-              <button class="ui button" onclick="connect('${instance.token}')">Connect</button>
+              <button class="ui primary positive button dashboard-button ${instance.loggedIn === true ? 'hidden' : ''}" id="button-connect-${instance.id}" onclick="connect('${instance.token}')">Connect</button>
               <button class="ui button" onclick="logout('${instance.token}')">Logout</button>
            </div>
         </div>`;

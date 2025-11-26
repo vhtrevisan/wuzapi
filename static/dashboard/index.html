@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,6 +8,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.4/dist/semantic.min.css">
   <link rel="stylesheet" href="css/app.css">
 </head>
+
 <body>
 
   <!-- Login -->
@@ -15,7 +17,7 @@
       <div class="ui centered card login" style="width:600px;">
         <div class="content">
           <div class="center aligned mb-4">
-            <i class="whatsapp icon bi-whatsapp"></i> 
+            <i class="whatsapp icon bi-whatsapp"></i>
             <h2 class="ui header">WuzAPI Manager</h2>
             <p class="text-muted">Log in to access the dashboard</p>
           </div>
@@ -24,7 +26,7 @@
               <label for="loginToken">Access Token</label>
               <input type="text" id="loginToken" placeholder="Type your access token">
               <div class="ui description">
-                  Token used to authenticate your requests to the API.
+                Token used to authenticate your requests to the API.
               </div>
             </div>
             <div class="ui fluid buttons">
@@ -65,12 +67,13 @@
           <span id="user-role-text">...</span>
         </div>
         <div class="item">
-          <a href='#' id='menulogout'>Logout</a></div>
+          <a href='#' id='menulogout'>Logout</a>
         </div>
       </div>
     </div>
   </div>
-  
+  </div>
+
   <div style='height:70px;'>&nbsp;</div> <!-- top margin/spacer for header -->
 
   <!-- Instances Table -->
@@ -104,7 +107,7 @@
         <tbody id="instances-body"></tbody>
       </table>
     </div>
-  </div> 
+  </div>
 
   <!-- Instance Cards and Go Back to list button -->
   <div class="ui container fluid p1">
@@ -145,15 +148,21 @@
           <div class="description">Configure message history.</div>
         </div>
       </div>
+      <div class="purple card hidden widget" style="cursor: pointer;" id="hmacConfig">
         <div class="content"><a class="ui purple right ribbon label">Config</a>
           <div class="header">HMAC Key</div>
           <div class="description">Configure HMAC key for webhook security.</div>
         </div>
       </div>
-      <div class="purple card hidden widget" style="cursor: pointer;" id="chatwootConfig">
+      <div class="purple card hidden widget">
         <div class="content"><a class="ui purple right ribbon label">Config</a>
-          <div class="header">Chatwoot</div>
-          <div class="description">Configure Chatwoot integration.</div>
+          <div class="header">Chatwoot Integration</div>
+          <div class="description">
+            Configure native integration with Chatwoot (Inbox, Token, Url).
+          </div>
+        </div>
+        <div class="ui bottom attached button" id="chatwootConfig">
+          <i class="comments icon"></i> Config
         </div>
       </div>
     </div>
@@ -313,7 +322,8 @@
         </ol>
       </div>
       <div class="ui form">
-        <div class="field"><label>Phone</label><input id="pairphoneinput" type="text" placeholder="Type your phone number"><small>Press Enter to submit</small></div>
+        <div class="field"><label>Phone</label><input id="pairphoneinput" type="text"
+            placeholder="Type your phone number"><small>Press Enter to submit</small></div>
       </div>
     </div>
   </div>
@@ -388,13 +398,14 @@
             <option value="All">All Events</option>
           </select>
         </div>
-        <div class="field"><label>Webhook URL</label><input id="webhookinput" type="text" placeholder="Type webhook URL"></div>
+        <div class="field"><label>Webhook URL</label><input id="webhookinput" type="text"
+            placeholder="Type webhook URL"></div>
       </div>
-    <br>
-    <br>
-    <br>
-    <br>
-    <br>
+      <br>
+      <br>
+      <br>
+      <br>
+      <br>
     </div>
     <div class="actions">
       <div class="ui cancel button secondary">Close</div>
@@ -408,7 +419,8 @@
     <div class="content">
       <div class="ui info message">
         <div class="header">S3 Storage Configuration</div>
-        <p>Configure S3-compatible storage for media files. This includes AWS S3, MinIO, DigitalOcean Spaces, and other S3-compatible services.</p>
+        <p>Configure S3-compatible storage for media files. This includes AWS S3, MinIO, DigitalOcean Spaces, and other
+          S3-compatible services.</p>
       </div>
       <div class="ui form">
         <div class="field">
@@ -497,7 +509,8 @@
     <div class="content">
       <div class="ui info message">
         <div class="header">Proxy Settings</div>
-        <p>Configure HTTP/HTTPS or SOCKS5 proxy for WhatsApp connections. Useful for network restrictions or enhanced privacy.</p>
+        <p>Configure HTTP/HTTPS or SOCKS5 proxy for WhatsApp connections. Useful for network restrictions or enhanced
+          privacy.</p>
       </div>
       <div class="ui form">
         <div class="field">
@@ -509,8 +522,10 @@
         </div>
         <div class="field" id="proxyUrlField">
           <label>Proxy URL</label>
-          <input id="proxyUrl" type="text" placeholder="http://proxy.example.com:8080 or socks5://user:pass@proxy.example.com:1080">
-          <small>Include protocol (http://, https://, or socks5://) and port. Authentication can be included in URL format.</small>
+          <input id="proxyUrl" type="text"
+            placeholder="http://proxy.example.com:8080 or socks5://user:pass@proxy.example.com:1080">
+          <small>Include protocol (http://, https://, or socks5://) and port. Authentication can be included in URL
+            format.</small>
         </div>
       </div>
     </div>
@@ -563,7 +578,7 @@
       <div class="ui red button" id="deleteHmacConfig">Delete Configuration</div>
       <div class="ui positive right labeled icon button" id="saveHmacConfig">Save<i class="checkmark icon"></i></div>
     </div>
-    </div>
+  </div>
   </div>
 
   <!-- Chatwoot Configuration Modal -->
@@ -602,7 +617,8 @@
     </div>
     <div class="actions">
       <div class="ui cancel button secondary">Cancel</div>
-      <div class="ui positive right labeled icon button" id="saveChatwootConfig">Save<i class="checkmark icon"></i></div>
+      <div class="ui positive right labeled icon button" id="saveChatwootConfig">Save<i class="checkmark icon"></i>
+      </div>
     </div>
   </div>
 
@@ -693,7 +709,8 @@
         <div class="field">
           <label>Message History</label>
           <input type="number" name="history" min="0" value="0" placeholder="0">
-          <small>Number of messages to store in history per chat for this instance. Set to 0 to disable message history.</small>
+          <small>Number of messages to store in history per chat for this instance. Set to 0 to disable message
+            history.</small>
         </div>
 
         <!-- Proxy Configuration -->
@@ -707,8 +724,10 @@
         </div>
         <div class="field" id="addInstanceProxyUrlField" style="display: none;">
           <label>Proxy URL</label>
-          <input type="text" name="proxy_url" placeholder="http://proxy.example.com:8080 or socks5://user:pass@proxy.example.com:1080">
-          <small>Include protocol (http://, https://, or socks5://) and port. Authentication can be included in URL format.</small>
+          <input type="text" name="proxy_url"
+            placeholder="http://proxy.example.com:8080 or socks5://user:pass@proxy.example.com:1080">
+          <small>Include protocol (http://, https://, or socks5://) and port. Authentication can be included in URL
+            format.</small>
         </div>
 
         <!-- S3 Configuration -->
@@ -795,8 +814,7 @@
             • If lost, you'll need to generate a new key
           </p>
         </div>
-        <div class="field"
-         id="addInstanceHmacKeyField" style="display: none;">
+        <div class="field" id="addInstanceHmacKeyField" style="display: none;">
           <label>HMAC Key</label>
           <input type="password" name="hmac_key" placeholder="Enter HMAC key (minimum 32 characters)">
           <small>Minimum 32 characters for security. Keep this key secret!</small>
@@ -848,7 +866,8 @@
     <div class="content">
       <div class="ui message info hidden" id="userInfoContainer"></div>
       <div class="ui form">
-        <div class="field"><label>Phone</label><input id="userinfoinput" type="text" placeholder="Type phone number"></div>
+        <div class="field"><label>Phone</label><input id="userinfoinput" type="text" placeholder="Type phone number">
+        </div>
       </div>
     </div>
     <div class="actions">
@@ -862,7 +881,8 @@
     <div class="content">
       <div class="ui message info hidden" id="userAvatarContainer"></div>
       <div class="ui form">
-        <div class="field"><label>Phone</label><input id="useravatarinput" type="text" placeholder="Type phone number"></div>
+        <div class="field"><label>Phone</label><input id="useravatarinput" type="text" placeholder="Type phone number">
+        </div>
       </div>
     </div>
     <div class="actions">
@@ -878,7 +898,8 @@
     <div class="content">
       <div class="ui message info hidden" id="sendMessageContainer"></div>
       <div class="ui form">
-        <div class="field"><label>Phone</label><input id="messagesendphone" type="text" placeholder="Type phone number"></div>
+        <div class="field"><label>Phone</label><input id="messagesendphone" type="text" placeholder="Type phone number">
+        </div>
         <div class="field"><label>Message</label><textarea id="messagesendtext"></textarea></div>
       </div>
     </div>
@@ -893,8 +914,10 @@
     <div class="content">
       <div class="ui message info hidden" id="deleteMessageContainer"></div>
       <div class="ui form">
-        <div class="field"><label>Phone</label><input id="messagedeletephone" type="text" placeholder="Type phone number"></div>
-        <div class="field"><label>Message ID</label><input id="messagedeleteid" type="text" placeholder="Type the message id"></div>
+        <div class="field"><label>Phone</label><input id="messagedeletephone" type="text"
+            placeholder="Type phone number"></div>
+        <div class="field"><label>Message ID</label><input id="messagedeleteid" type="text"
+            placeholder="Type the message id"></div>
       </div>
     </div>
     <div class="actions">
@@ -935,7 +958,7 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Participants List -->
       <div class="ui divider"></div>
       <h4 class="ui header">
@@ -954,33 +977,33 @@
           <div class="ui fluid buttons">
             <button class="ui blue button" id="editGroupInfoBtn">
               <i class="edit icon"></i> Edit Info
-        </button>
+            </button>
             <button class="ui green button" id="manageParticipantsBtn">
               <i class="users icon"></i> Participants
-        </button>
+            </button>
           </div>
         </div>
-        
+
         <!-- Admin Actions -->
         <div class="eight wide column" id="adminActionsSection" style="display: none;">
           <h5 class="ui header">Admin Actions</h5>
           <div class="ui fluid buttons">
             <button class="ui orange button" id="groupSettingsBtn">
-          <i class="settings icon"></i> Settings
-        </button>
+              <i class="settings icon"></i> Settings
+            </button>
             <button class="ui purple button" id="groupInviteLinkBtn">
               <i class="linkify icon"></i> Invite Link
             </button>
           </div>
         </div>
-        
+
         <!-- Danger Zone -->
         <div class="sixteen wide column">
           <div class="ui divider"></div>
           <h5 class="ui red header">Danger Zone</h5>
           <button class="ui red button fluid" id="leaveGroupBtn">
-          <i class="sign out icon"></i> Leave Group
-        </button>
+            <i class="sign out icon"></i> Leave Group
+          </button>
         </div>
       </div>
     </div>
@@ -1090,7 +1113,8 @@
           <div class="ui segment">
             <div class="ui stackable grid">
               <div class="four wide column center aligned">
-                <img id="currentGroupPhoto" class="ui small circular image" src="" alt="Current Photo" style="display: none;">
+                <img id="currentGroupPhoto" class="ui small circular image" src="" alt="Current Photo"
+                  style="display: none;">
                 <div id="noCurrentPhoto" class="ui icon header">
                   <i class="users icon"></i>
                   No Photo
@@ -1141,7 +1165,7 @@
             When enabled, only group admins can send messages to this group.
           </div>
         </div>
-        
+
         <h4 class="ui dividing header">Group Information</h4>
         <div class="field">
           <div class="ui toggle checkbox" id="editInfoToggle">
@@ -1152,7 +1176,7 @@
             When enabled, only group admins can edit group name, description, and photo.
           </div>
         </div>
-        
+
         <h4 class="ui dividing header">Disappearing Messages</h4>
         <div class="field">
           <label>Message Timer</label>
@@ -1183,10 +1207,10 @@
                 <div class="ui buttons">
                   <button type="button" class="ui button" id="changeGroupPhotoBtn">
                     <i class="camera icon"></i> Change Photo
-            </button>
+                  </button>
                   <button type="button" class="ui negative button" id="removeGroupPhotoBtn">
                     <i class="trash icon"></i> Remove Photo
-            </button>
+                  </button>
                 </div>
                 <input type="file" id="groupPhotoInput" accept="image/*" style="display: none;">
               </div>
@@ -1245,7 +1269,7 @@
             </button>
           </div>
         </div>
-        
+
         <!-- Current Participants Section -->
         <div class="eight wide column">
           <h4 class="ui header">
@@ -1289,11 +1313,13 @@
       <form class="ui form" id="editGroupInfoForm">
         <div class="field">
           <label>Group Name</label>
-          <input type="text" name="groupName" id="editGroupNameInput" placeholder="Enter group name" maxlength="25" required>
+          <input type="text" name="groupName" id="editGroupNameInput" placeholder="Enter group name" maxlength="25"
+            required>
         </div>
         <div class="field">
           <label>Group Description</label>
-          <textarea name="groupDescription" id="editGroupDescriptionInput" placeholder="Enter group description" rows="3"></textarea>
+          <textarea name="groupDescription" id="editGroupDescriptionInput" placeholder="Enter group description"
+            rows="3"></textarea>
         </div>
         <div class="ui error message"></div>
       </form>
@@ -1327,10 +1353,11 @@
           Share this link to invite people to join the group.
         </div>
       </div>
-      
+
       <div class="ui warning message">
         <div class="header">Reset Invite Link</div>
-        <p>Resetting the invite link will invalidate the current link and create a new one. Anyone with the old link will no longer be able to join.</p>
+        <p>Resetting the invite link will invalidate the current link and create a new one. Anyone with the old link
+          will no longer be able to join.</p>
         <button class="ui orange button" id="resetInviteLinkBtn">
           <i class="refresh icon"></i> Reset Link
         </button>
@@ -1346,4 +1373,5 @@
   <script src="js/app.js"></script>
   <script src="js/groups.js"></script>
 </body>
+
 </html>
