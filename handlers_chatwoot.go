@@ -107,28 +107,30 @@ func (s *server) HandleChatwootWebhook() http.HandlerFunc {
 			return
 		}
 
-		// 6. Send Message
-		if len(payload.Attachments) > 0 {
-			// Handle Attachments (Media)
-			for _, attachment := range payload.Attachments {
-				err := s.sendMediaFromURL(client, jid, attachment.DataURL, payload.Content)
+		// 6. Send Message Asynchronously
+		// Use goroutine to prevent transaction conflicts and return 200 OK immediately
+		go func() {
+			if len(payload.Attachments) > 0 {
+				// Handle Attachments (Media)
+				for _, attachment := range payload.Attachments {
+					err := s.sendMediaFromURL(client, jid, attachment.DataURL, payload.Content)
+					if err != nil {
+						log.Error().Err(err).Msg("Failed to send media from Chatwoot")
+					}
+				}
+			} else {
+				// Handle Text Message
+				msg := &waE2E.Message{
+					Conversation: proto.String(payload.Content),
+				}
+				_, err := client.SendMessage(context.Background(), jid, msg)
 				if err != nil {
-					log.Error().Err(err).Msg("Failed to send media from Chatwoot")
+					log.Error().Err(err).Msg("Failed to send text message from Chatwoot")
 				}
 			}
-		} else {
-			// Handle Text Message
-			msg := &waE2E.Message{
-				Conversation: proto.String(payload.Content),
-			}
-			_, err := client.SendMessage(context.Background(), jid, msg)
-			if err != nil {
-				log.Error().Err(err).Msg("Failed to send text message from Chatwoot")
-				s.Respond(w, r, http.StatusInternalServerError, err)
-				return
-			}
-		}
+		}()
 
+		// Return success immediately without waiting for delivery
 		s.Respond(w, r, http.StatusOK, `{"status":"success","message":"sent"}`)
 	}
 }

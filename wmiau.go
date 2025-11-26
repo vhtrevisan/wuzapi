@@ -350,11 +350,43 @@ func (s *server) connectOnStartup() {
 }
 
 func (mycli *MyClient) handleChatwootForwarding(evt *events.Message) {
-	// CRITICAL: Ignore messages sent by this instance to prevent duplication
-	// and sync issues. Only forward messages FROM other users TO this instance.
+	// ============ FILTROS DE SEGURANÇA ANTI-DUPLICAÇÃO ============
+
+	// 1. Ignora mensagens enviadas por mim (Sync do WhatsApp Web)
 	if evt.Info.IsFromMe {
 		return
 	}
+
+	// 2. Ignora mensagens de protocolo/sistema (sem conteúdo visível)
+	if evt.Message.GetProtocolMessage() != nil {
+		return
+	}
+
+	// 3. Ignora reações e mensagens de keep-in-chat
+	if evt.Message.GetReactionMessage() != nil || evt.Message.GetKeepInChatMessage() != nil {
+		return
+	}
+
+	// 4. Ignora mensagens de poll (enquetes) não suportadas
+	if evt.Message.GetPollCreationMessage() != nil || evt.Message.GetPollUpdateMessage() != nil {
+		return
+	}
+
+	// 5. Ignora recibos de leitura e entrega (só processar conteúdo real)
+	// Essas mensagens não têm corpo de texto/mídia
+	hasContent := evt.Message.GetConversation() != "" ||
+		evt.Message.GetExtendedTextMessage() != nil ||
+		evt.Message.GetImageMessage() != nil ||
+		evt.Message.GetVideoMessage() != nil ||
+		evt.Message.GetAudioMessage() != nil ||
+		evt.Message.GetDocumentMessage() != nil ||
+		evt.Message.GetStickerMessage() != nil
+
+	if !hasContent {
+		return
+	}
+
+	// ============ FIM DOS FILTROS ============
 
 	cwConfig, err := mycli.s.GetChatwootConfig(mycli.userID)
 	if err != nil || cwConfig == nil || cwConfig.URL == "" {
