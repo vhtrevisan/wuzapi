@@ -904,6 +904,10 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 		}
 
 		postmap["type"] = "Message"
+
+		// CHATWOOT: Forward message to Chatwoot if configured (independent of webhook)
+		go mycli.handleChatwootForwarding(evt)
+
 		dowebhook = 1
 		metaParts := []string{fmt.Sprintf("pushname: %s", evt.Info.PushName), fmt.Sprintf("timestamp: %s", evt.Info.Timestamp)}
 		if evt.Info.Type != "" {
