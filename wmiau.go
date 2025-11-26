@@ -466,9 +466,13 @@ func (mycli *MyClient) handleChatwootForwarding(evt *events.Message) {
 			InboxID:   cwConfig.InboxID,
 		})
 
-		sender := evt.Info.Sender.User
+		// CRÍTICO: Identificar o CONTATO (não você mesmo)
+		// Para mensagens IsFromMe=true: Chat = destinatário (contato)
+		// Para mensagens IsFromMe=false: Chat também é o contato que enviou
+		// Em ambos os casos, Chat.User é o número do contato
+		sender := evt.Info.Chat.User
 		if evt.Info.IsGroup {
-			sender = evt.Info.Chat.User
+			sender = evt.Info.Chat.User // Para grupos, também usamos Chat
 		}
 
 		contactName := evt.Info.PushName
@@ -477,8 +481,8 @@ func (mycli *MyClient) handleChatwootForwarding(evt *events.Message) {
 		}
 
 		// CRÍTICO: sourceID deve ser único por conversa
-		// Usar o JID completo do chat/sender para garantir que cada contato tenha sua própria conversa
-		sourceID := evt.Info.Sender.String() // Formato: 5515996956342@s.whatsapp.net
+		// Usar o JID completo do chat para garantir que cada contato tenha sua própria conversa
+		sourceID := evt.Info.Chat.String() // Formato: 5515996956342@s.whatsapp.net
 		if evt.Info.IsGroup {
 			sourceID = evt.Info.Chat.String()
 		}
