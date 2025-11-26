@@ -350,133 +350,153 @@ func (s *server) connectOnStartup() {
 }
 
 func (mycli *MyClient) handleChatwootForwarding(evt *events.Message) {
-	// ============ FILTROS DE SEGURANÇA ANTI-DUPLICAÇÃO ============
+	// ============ FILTRO SUPREMO ANTI-DUPLICAÇÃO ============
 
-	// 1. Ignora mensagens enviadas por mim (Sync do WhatsApp Web)
+	// 1. Ignora mensagens enviadas pela própria instância (Sync do WhatsApp Web)
 	if evt.Info.IsFromMe {
 		return
 	}
 
-	// 2. Ignora mensagens de protocolo/sistema (sem conteúdo visível)
-	if evt.Message.GetProtocolMessage() != nil {
+	// 2. Ignora mensagens de Grupo (descomente se não quiser suporte a grupos)
+	// if evt.Info.IsGroup { return }
+
+	// 3. Ignora mensagens de Protocolo e Reações (Anti-Duplicação Real)
+	// Mensagens de protocolo (edições, revogações, histórico) não devem criar tickets
+	if evt.Message.GetProtocolMessage() != nil ||
+		evt.Message.GetReactionMessage() != nil ||
+		evt.Message.GetKeepInChatMessage() != nil ||
+		evt.Message.GetPollCreationMessage() != nil ||
+		evt.Message.GetPollUpdateMessage() != nil {
 		return
 	}
 
-	// 3. Ignora reações e mensagens de keep-in-chat
-	if evt.Message.GetReactionMessage() != nil || evt.Message.GetKeepInChatMessage() != nil {
-		return
+	// 4. Validação de Conteúdo (Whitelist Estrita)
+	// Só processa se tiver um dos tipos de conteúdo suportados
+	hasContent := false
+	if evt.Message.GetConversation() != "" {
+		hasContent = true
 	}
-
-	// 4. Ignora mensagens de poll (enquetes) não suportadas
-	if evt.Message.GetPollCreationMessage() != nil || evt.Message.GetPollUpdateMessage() != nil {
-		return
+	if evt.Message.GetExtendedTextMessage() != nil {
+		hasContent = true
 	}
-
-	// 5. Ignora recibos de leitura e entrega (só processar conteúdo real)
-	// Essas mensagens não têm corpo de texto/mídia
-	hasContent := evt.Message.GetConversation() != "" ||
-		evt.Message.GetExtendedTextMessage() != nil ||
-		evt.Message.GetImageMessage() != nil ||
-		evt.Message.GetVideoMessage() != nil ||
-		evt.Message.GetAudioMessage() != nil ||
-		evt.Message.GetDocumentMessage() != nil ||
-		evt.Message.GetStickerMessage() != nil
+	if evt.Message.GetImageMessage() != nil {
+		hasContent = true
+	}
+	if evt.Message.GetVideoMessage() != nil {
+		hasContent = true
+	}
+	if evt.Message.GetAudioMessage() != nil {
+		hasContent = true
+	}
+	if evt.Message.GetDocumentMessage() != nil {
+		hasContent = true
+	}
+	if evt.Message.GetStickerMessage() != nil {
+		hasContent = true
+	}
+	if evt.Message.GetLocationMessage() != nil {
+		hasContent = true
+	}
+	if evt.Message.GetContactMessage() != nil {
+		hasContent = true
+	}
 
 	if !hasContent {
+		// Ignora silenciosamente eventos sem conteúdo válido
 		return
 	}
 
 	// ============ FIM DOS FILTROS ============
 
+	// 5. Recupera Configuração
 	cwConfig, err := mycli.s.GetChatwootConfig(mycli.userID)
-	if err != nil || cwConfig == nil || cwConfig.URL == "" {
+	if err != nil || cwConfig == nil || cwConfig.URL == "" || cwConfig.InboxID == "" {
 		return
 	}
 
-	cwClient := chatwoot.NewClient(chatwoot.Config{
-		AccountID: cwConfig.AccountID,
-		Token:     cwConfig.Token,
-		URL:       cwConfig.URL,
-		InboxID:   cwConfig.InboxID,
-	})
+	// 6. Executa o Envio em Goroutine Isolada
+	// Para não travar o listener principal e evitar conflitos de contexto
+	go func() {
+		cwClient := chatwoot.NewClient(chatwoot.Config{
+			AccountID: cwConfig.AccountID,
+			Token:     cwConfig.Token,
+			URL:       cwConfig.URL,
+			InboxID:   cwConfig.InboxID,
+		})
 
-	sender := evt.Info.Sender.User
-	if evt.Info.IsGroup {
-		// For groups, we might want to use the group JID or participant
-		// For now, let's skip groups or handle them differently if needed.
-		// User request didn't specify groups, but usually 1:1 is priority.
-		// Let's use the Chat JID for conversation source.
-		sender = evt.Info.Chat.User
-	}
-
-	contactName := evt.Info.PushName
-	if contactName == "" {
-		contactName = sender
-	}
-
-	// Debug: Log the sender number being used
-	log.Debug().
-		Str("sender", sender).
-		Str("contactName", contactName).
-		Msg("Chatwoot: Creating/finding contact")
-
-	contactID, err := cwClient.EnsureContact(sender, contactName)
-	if err != nil {
-		log.Error().Err(err).Msg("Chatwoot: Failed to ensure contact")
-		return
-	}
-
-	convID, err := cwClient.EnsureConversation(contactID, sender)
-	if err != nil {
-		log.Error().Err(err).Msg("Chatwoot: Failed to ensure conversation")
-		return
-	}
-
-	// All messages forwarded to Chatwoot are "incoming" since we filter IsFromMe above
-	msgType := "incoming"
-
-	var media []byte
-	var mediaFilename string
-	var mediaMimeType string
-	var content string
-
-	// Extract text content
-	if conv := evt.Message.GetConversation(); conv != "" {
-		content = conv
-	} else if ext := evt.Message.GetExtendedTextMessage(); ext != nil {
-		content = ext.GetText()
-	} else if img := evt.Message.GetImageMessage(); img != nil {
-		content = img.GetCaption()
-		media, _ = mycli.WAClient.Download(context.Background(), img)
-		mediaMimeType = img.GetMimetype()
-		mediaFilename = "image.jpg"
-	} else if video := evt.Message.GetVideoMessage(); video != nil {
-		content = video.GetCaption()
-		media, _ = mycli.WAClient.Download(context.Background(), video)
-		mediaMimeType = video.GetMimetype()
-		mediaFilename = "video.mp4"
-	} else if audio := evt.Message.GetAudioMessage(); audio != nil {
-		media, _ = mycli.WAClient.Download(context.Background(), audio)
-		mediaMimeType = audio.GetMimetype()
-		mediaFilename = "audio.ogg"
-	} else if doc := evt.Message.GetDocumentMessage(); doc != nil {
-		content = doc.GetCaption()
-		media, _ = mycli.WAClient.Download(context.Background(), doc)
-		mediaMimeType = doc.GetMimetype()
-		mediaFilename = doc.GetFileName()
-		if mediaFilename == "" {
-			mediaFilename = "document"
+		sender := evt.Info.Sender.User
+		if evt.Info.IsGroup {
+			sender = evt.Info.Chat.User
 		}
-	} else if sticker := evt.Message.GetStickerMessage(); sticker != nil {
-		media, _ = mycli.WAClient.Download(context.Background(), sticker)
-		mediaMimeType = sticker.GetMimetype()
-		mediaFilename = "sticker.webp"
-	}
 
-	err = cwClient.SendMessage(convID, msgType, content, evt.Info.ID, media, mediaFilename, mediaMimeType)
-	if err != nil {
-		log.Error().Err(err).Msg("Chatwoot: Failed to send message")
-	}
+		contactName := evt.Info.PushName
+		if contactName == "" {
+			contactName = sender
+		}
+
+		// Formata E.164 e Garante Contato/Conversa
+		// O método EnsureContact já chama formatToE164 internamente
+		contactID, err := cwClient.EnsureContact(sender, contactName)
+		if err != nil {
+			log.Error().Err(err).Str("sender", sender).Msg("Chatwoot: Failed to ensure contact")
+			return
+		}
+
+		convID, err := cwClient.EnsureConversation(contactID, sender)
+		if err != nil {
+			log.Error().Err(err).Msg("Chatwoot: Failed to ensure conversation")
+			return
+		}
+
+		// Prepara Payload
+		msgType := "incoming"
+		var media []byte
+		var mediaFilename, mediaMimeType, content string
+
+		// Extração de Conteúdo
+		if conv := evt.Message.GetConversation(); conv != "" {
+			content = conv
+		} else if ext := evt.Message.GetExtendedTextMessage(); ext != nil {
+			content = ext.GetText()
+		} else if img := evt.Message.GetImageMessage(); img != nil {
+			content = img.GetCaption()
+			media, _ = mycli.WAClient.Download(context.Background(), img)
+			mediaMimeType = img.GetMimetype()
+			mediaFilename = "image.jpg"
+		} else if video := evt.Message.GetVideoMessage(); video != nil {
+			content = video.GetCaption()
+			media, _ = mycli.WAClient.Download(context.Background(), video)
+			mediaMimeType = video.GetMimetype()
+			mediaFilename = "video.mp4"
+		} else if audio := evt.Message.GetAudioMessage(); audio != nil {
+			media, _ = mycli.WAClient.Download(context.Background(), audio)
+			mediaMimeType = audio.GetMimetype()
+			mediaFilename = "audio.ogg"
+		} else if doc := evt.Message.GetDocumentMessage(); doc != nil {
+			content = doc.GetCaption()
+			media, _ = mycli.WAClient.Download(context.Background(), doc)
+			mediaMimeType = doc.GetMimetype()
+			mediaFilename = doc.GetFileName()
+			if mediaFilename == "" {
+				mediaFilename = "document"
+			}
+		} else if sticker := evt.Message.GetStickerMessage(); sticker != nil {
+			media, _ = mycli.WAClient.Download(context.Background(), sticker)
+			mediaMimeType = sticker.GetMimetype()
+			mediaFilename = "sticker.webp"
+		} else if location := evt.Message.GetLocationMessage(); location != nil {
+			content = fmt.Sprintf("📍 Location: %f, %f", location.GetDegreesLatitude(), location.GetDegreesLongitude())
+		} else if contact := evt.Message.GetContactMessage(); contact != nil {
+			content = fmt.Sprintf("👤 Contact: %s", contact.GetDisplayName())
+		}
+
+		// Envio Final
+		if err := cwClient.SendMessage(convID, msgType, content, evt.Info.ID, media, mediaFilename, mediaMimeType); err != nil {
+			log.Error().Err(err).Msg("Chatwoot: Failed to send message")
+		} else {
+			log.Info().Str("sender", sender).Str("type", msgType).Msg("Chatwoot: Message forwarded successfully")
+		}
+	}()
 }
 
 func parseJID(arg string) (types.JID, bool) {

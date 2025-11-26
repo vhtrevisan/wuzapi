@@ -110,6 +110,9 @@ func (s *server) HandleChatwootWebhook() http.HandlerFunc {
 		// 6. Send Message Asynchronously
 		// Use goroutine to prevent transaction conflicts and return 200 OK immediately
 		go func() {
+			// Create isolated background context to prevent transaction conflicts
+			ctx := context.Background()
+
 			if len(payload.Attachments) > 0 {
 				// Handle Attachments (Media)
 				for _, attachment := range payload.Attachments {
@@ -123,7 +126,8 @@ func (s *server) HandleChatwootWebhook() http.HandlerFunc {
 				msg := &waE2E.Message{
 					Conversation: proto.String(payload.Content),
 				}
-				_, err := client.SendMessage(context.Background(), jid, msg)
+				// Use client.SendMessage directly with isolated context
+				_, err := client.SendMessage(ctx, jid, msg)
 				if err != nil {
 					log.Error().Err(err).Msg("Failed to send text message from Chatwoot")
 				}
