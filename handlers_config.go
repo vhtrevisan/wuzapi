@@ -3,7 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
+
+	"wuzapi/pkg/chatwoot"
 )
 
 func (s *server) GetChatwootConfigHandler() http.HandlerFunc {
@@ -47,6 +51,14 @@ func (s *server) SetChatwootConfigHandler() http.HandlerFunc {
 			return
 		}
 
+		// Get user token and name from database
+		var userToken, userName string
+		err := s.db.QueryRow("SELECT token, name FROM users WHERE id=$1", txtid).Scan(&userToken, &userName)
+		if err != nil {
+			s.Respond(w, r, http.StatusInternalServerError, fmt.Errorf("failed to get user: %w", err))
+			return
+		}
+
 		var config ChatwootConfig
 		if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
 			s.Respond(w, r, http.StatusBadRequest, fmt.Errorf("invalid json"))
@@ -55,10 +67,7 @@ func (s *server) SetChatwootConfigHandler() http.HandlerFunc {
 
 		config.UserID = txtid
 
-		// If token is masked (starts with ****), we might want to preserve the old token if not changed.
-		// However, for simplicity, we assume the frontend sends the full token if it's being changed,
-		// or we handle this logic.
-		// If the user sends "****", we should probably fetch the existing config and keep the old token.
+		// If token is masked (starts with ****), preserve the old token
 		if len(config.Token) >= 4 && config.Token[:4] == "****" {
 			existingConfig, err := s.GetChatwootConfig(txtid)
 			if err == nil && existingConfig != nil {
@@ -66,6 +75,78 @@ func (s *server) SetChatwootConfigHandler() http.HandlerFunc {
 			}
 		}
 
+		// Auto-creation logic: if InboxID is empty or "0", create inbox automatically
+		if config.InboxID == "" || config.InboxID == "0" {
+			log.Println("InboxID is empty, starting auto-creation flow...")
+
+			// 1. Validate SERVER_URL environment variable
+			serverURL := os.Getenv("SERVER_URL")
+			if serverURL == "" {
+				s.Respond(w, r, http.StatusBadRequest, fmt.Errorf("SERVER_URL environment variable is not set. Cannot auto-create inbox"))
+				return
+			}
+
+			// 2. Build webhook URL with user token
+			webhookURL := fmt.Sprintf("%s/chatwoot/webhook?token=%s", serverURL, userToken)
+			log.Printf("Webhook URL: %s", webhookURL)
+
+			// 3. Initialize Chatwoot client
+			chatwootClient := chatwoot.NewClient(chatwoot.Config{
+				AccountID: config.AccountID,
+				Token:     config.Token,
+				URL:       config.URL,
+			})
+
+			// 4. Check if inbox already exists, create if not
+			log.Printf("Checking if inbox exists for: %s", userName)
+			inboxID, err := chatwootClient.FindInboxByName(userName)
+			if err != nil {
+				s.Respond(w, r, http.StatusInternalServerError, fmt.Errorf("failed to search for inbox: %w", err))
+				return
+			}
+
+			if inboxID == 0 {
+				// Inbox not found, create new one
+				log.Println("Inbox not found, creating new Chatwoot inbox...")
+				inboxID, err = chatwootClient.CreateInbox(userName, webhookURL)
+				if err != nil {
+					s.Respond(w, r, http.StatusInternalServerError, fmt.Errorf("failed to create inbox: %w", err))
+					return
+				}
+				log.Printf("Inbox created successfully with ID: %d", inboxID)
+			} else {
+				// Inbox found, reuse existing
+				log.Printf("Found existing inbox with ID: %d, reusing it", inboxID)
+			}
+
+			// Update config with inbox ID (whether found or created)
+			config.InboxID = fmt.Sprintf("%d", inboxID)
+
+			// Update client config with the InboxID for subsequent calls
+			chatwootClient.Config.InboxID = config.InboxID
+
+			// 5. Create system contact
+			log.Println("Creating system contact...")
+			contactID, err := chatwootClient.CreateContact("Wuzapi System", "+123456")
+			if err != nil {
+				// Log error but don't fail the entire flow
+				log.Printf("Warning: Failed to create system contact: %v", err)
+			} else {
+				log.Printf("System contact created with ID: %d", contactID)
+
+				// 6. Send initial welcome message
+				log.Println("Sending initial welcome message...")
+				err = chatwootClient.SendInitMessage(contactID, inboxID)
+				if err != nil {
+					// Log error but don't fail the entire flow - integration is already working
+					log.Printf("Warning: Failed to send initial message: %v", err)
+				} else {
+					log.Println("Initial message sent successfully")
+				}
+			}
+		}
+
+		// Save configuration to database
 		if err := s.SaveChatwootConfig(&config); err != nil {
 			s.Respond(w, r, http.StatusInternalServerError, err)
 			return

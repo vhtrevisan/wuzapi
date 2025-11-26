@@ -22,6 +22,43 @@ type Config struct {
 	InboxID   string
 }
 
+// Request/Response structs for auto-setup
+type CreateInboxRequest struct {
+	Name    string        `json:"name"`
+	Channel ChannelConfig `json:"channel"`
+}
+
+type ChannelConfig struct {
+	Type       string `json:"type"`        // Must be "api"
+	WebhookURL string `json:"webhook_url"` // Wuzapi webhook URL
+}
+
+// Inbox represents an inbox in the list response
+type Inbox struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+// CreateInboxResponse represents the response when creating an inbox
+type CreateInboxResponse struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+type CreateContactRequest struct {
+	InboxID     string `json:"inbox_id"`
+	Name        string `json:"name"`
+	PhoneNumber string `json:"phone_number"`
+}
+
+type ContactResponse struct {
+	Payload struct {
+		Contact struct {
+			ID int `json:"id"`
+		} `json:"contact"`
+	} `json:"payload"`
+}
+
 func NewClient(config Config) *Client {
 	return &Client{
 		Config: config,
@@ -259,4 +296,153 @@ func (c *Client) SendMessage(conversationID int, msgType string, content string,
 		}
 		return nil
 	}
+}
+
+// FindInboxByName searches for an inbox by name and returns its ID
+// Returns 0 if not found (no error), or error if the API call fails
+func (c *Client) FindInboxByName(name string) (int, error) {
+	url := fmt.Sprintf("%s/api/v1/accounts/%s/inboxes", c.Config.URL, c.Config.AccountID)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("api_access_token", c.Config.Token)
+
+	resp, err := c.HTTP.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return 0, fmt.Errorf("failed to list inboxes: %s - %s", resp.Status, string(bodyBytes))
+	}
+
+	var result struct {
+		Payload []Inbox `json:"payload"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return 0, err
+	}
+
+	// Search for inbox with matching name
+	for _, inbox := range result.Payload {
+		if inbox.Name == name {
+			return inbox.ID, nil
+		}
+	}
+
+	// Not found, return 0 (no error)
+	return 0, nil
+}
+
+// CreateInbox creates a new inbox in Chatwoot with API channel type
+func (c *Client) CreateInbox(name string, webhookURL string) (int, error) {
+	url := fmt.Sprintf("%s/api/v1/accounts/%s/inboxes", c.Config.URL, c.Config.AccountID)
+
+	payload := CreateInboxRequest{
+		Name: name,
+		Channel: ChannelConfig{
+			Type:       "api",
+			WebhookURL: webhookURL,
+		},
+	}
+
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return 0, err
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("api_access_token", c.Config.Token)
+
+	resp, err := c.HTTP.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return 0, fmt.Errorf("failed to create inbox: %s - %s", resp.Status, string(bodyBytes))
+	}
+
+	var result CreateInboxResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return 0, err
+	}
+
+	return result.ID, nil
+}
+
+// CreateContact creates a contact in Chatwoot (used for system bot)
+func (c *Client) CreateContact(name string, phone string) (int, error) {
+	url := fmt.Sprintf("%s/api/v1/accounts/%s/contacts", c.Config.URL, c.Config.AccountID)
+
+	payload := map[string]interface{}{
+		"inbox_id":     c.Config.InboxID,
+		"name":         name,
+		"phone_number": phone,
+	}
+
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return 0, err
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("api_access_token", c.Config.Token)
+
+	resp, err := c.HTTP.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return 0, fmt.Errorf("failed to create contact: %s - %s", resp.Status, string(bodyBytes))
+	}
+
+	var result ContactResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return 0, err
+	}
+
+	return result.Payload.Contact.ID, nil
+}
+
+// SendInitMessage sends the initial welcome message to confirm integration
+func (c *Client) SendInitMessage(contactID int, inboxID int) error {
+	// Ensure conversation exists
+	conversationID, err := c.EnsureConversation(contactID, "wuzapi-init")
+	if err != nil {
+		return fmt.Errorf("failed to ensure conversation: %w", err)
+	}
+
+	// Send welcome message
+	err = c.SendMessage(
+		conversationID,
+		"incoming",
+		"🚀 Integração Wuzapi Conectada com Sucesso!",
+		"wuzapi-init-msg",
+		nil,
+		"",
+		"",
+	)
+	if err != nil {
+		return fmt.Errorf("failed to send init message: %w", err)
+	}
+
+	return nil
 }
