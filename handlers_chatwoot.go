@@ -122,34 +122,32 @@ func (s *server) HandleChatwootWebhook() http.HandlerFunc {
 			return
 		}
 
-		// 6. Send Message Asynchronously
-		// Use goroutine to prevent transaction conflicts and return 200 OK immediately
-		go func() {
-			// Create isolated background context to prevent transaction conflicts
-			ctx := context.Background()
-
-			if len(payload.Attachments) > 0 {
-				// Handle Attachments (Media)
-				for _, attachment := range payload.Attachments {
-					err := s.sendMediaFromURL(client, jid, attachment.DataURL, payload.Content)
-					if err != nil {
-						log.Error().Err(err).Msg("Failed to send media from Chatwoot")
-					}
-				}
-			} else {
-				// Handle Text Message
-				msg := &waE2E.Message{
-					Conversation: proto.String(payload.Content),
-				}
-				// Use client.SendMessage directly with isolated context
-				_, err := client.SendMessage(ctx, jid, msg)
+		// 6. Send Message
+		// Send synchronously to avoid SQL transaction conflicts
+		if len(payload.Attachments) > 0 {
+			// Handle Attachments (Media)
+			for _, attachment := range payload.Attachments {
+				err := s.sendMediaFromURL(client, jid, attachment.DataURL, payload.Content)
 				if err != nil {
-					log.Error().Err(err).Msg("Failed to send text message from Chatwoot")
+					log.Error().Err(err).Msg("Failed to send media from Chatwoot")
+					respondJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to send media"})
+					return
 				}
 			}
-		}()
+		} else {
+			// Handle Text Message
+			msg := &waE2E.Message{
+				Conversation: proto.String(payload.Content),
+			}
+			_, err := client.SendMessage(context.Background(), jid, msg)
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to send text message from Chatwoot")
+				respondJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to send message"})
+				return
+			}
+		}
 
-		// Return success immediately without waiting for delivery
+		// Return success after sending
 		respondJSON(w, http.StatusOK, map[string]string{"status": "success", "message": "sent"})
 	}
 }
