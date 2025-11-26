@@ -146,33 +146,37 @@ func (s *server) HandleChatwootWebhook() http.HandlerFunc {
 			return
 		}
 
-		// 6. Send Message
-		// Send synchronously to avoid SQL transaction conflicts
-		if len(payload.Attachments) > 0 {
-			// Handle Attachments (Media)
-			for _, attachment := range payload.Attachments {
-				err := s.sendMediaFromURL(client, jid, attachment.DataURL, payload.Content)
+		// 6. Respond immediately to avoid webhook timeout
+		respondJSON(w, http.StatusOK, map[string]string{"status": "queued", "message": "message queued for sending"})
+
+		// 7. Send Message ASYNCHRONOUSLY in background to avoid SQL transaction conflicts
+		go func() {
+			// Use isolated context with timeout to prevent database locking
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			if len(payload.Attachments) > 0 {
+				// Handle Attachments (Media)
+				for _, attachment := range payload.Attachments {
+					err := s.sendMediaFromURL(client, jid, attachment.DataURL, payload.Content)
+					if err != nil {
+						log.Error().Err(err).Msg("Failed to send media from Chatwoot (async)")
+						return
+					}
+				}
+			} else {
+				// Handle Text Message
+				msg := &waE2E.Message{
+					Conversation: proto.String(payload.Content),
+				}
+				_, err := client.SendMessage(ctx, jid, msg)
 				if err != nil {
-					log.Error().Err(err).Msg("Failed to send media from Chatwoot")
-					respondJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to send media"})
+					log.Error().Err(err).Msg("Failed to send text message from Chatwoot (async)")
 					return
 				}
+				log.Info().Str("content", payload.Content).Msg("Message sent successfully from Chatwoot")
 			}
-		} else {
-			// Handle Text Message
-			msg := &waE2E.Message{
-				Conversation: proto.String(payload.Content),
-			}
-			_, err := client.SendMessage(r.Context(), jid, msg)
-			if err != nil {
-				log.Error().Err(err).Msg("Failed to send text message from Chatwoot")
-				respondJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to send message"})
-				return
-			}
-		}
-
-		// Return success after sending
-		respondJSON(w, http.StatusOK, map[string]string{"status": "success", "message": "sent"})
+		}()
 	}
 }
 
