@@ -7,7 +7,7 @@ let instanceToDelete = null;
 let isAdminLogin = false;
 let currentInstanceData = null;
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
 
   let isHandlingChange = false;
 
@@ -15,19 +15,19 @@ document.addEventListener('DOMContentLoaded', function() {
   const loginTokenInput = document.getElementById('loginToken');
   const regularLoginBtn = document.getElementById('regularLoginBtn');
   const adminLoginBtn = document.getElementById('loginAsAdminBtn');
- 
+
   hideWidgets();
 
   $('#deleteInstanceModal').modal({
     closable: true,
-    onDeny: function() {
+    onDeny: function () {
       instanceToDelete = null;
     }
   });
 
   // Initialize dropdowns for webhook events
   $('#webhookEvents').dropdown({
-    onChange: function(value, text, $selectedItem) {
+    onChange: function (value, text, $selectedItem) {
       if (isHandlingChange) return;
       if (value.includes('All')) {
         // If "All" is selected, clear selection and select only "All"
@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   $('#webhookEventsInstance').dropdown({
-    onChange: function(value, text, $selectedItem) {
+    onChange: function (value, text, $selectedItem) {
       if (isHandlingChange) return;
       if (value.includes('All')) {
         // If "All" is selected, clear selection and select only "All"
@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Initialize proxy enabled checkbox with onChange handler
   $('#proxyEnabledToggle').checkbox({
-    onChange: function() {
+    onChange: function () {
       const enabled = $('#proxyEnabled').is(':checked');
       if (enabled) {
         $('#proxyUrlField').addClass('show');
@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Initialize add instance proxy toggle
   $('#addInstanceProxyToggle').checkbox({
-    onChange: function() {
+    onChange: function () {
       const enabled = $('input[name="proxy_enabled"]').is(':checked');
       if (enabled) {
         $('#addInstanceProxyUrlField').show();
@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Initialize add instance S3 toggle
   $('#addInstanceS3Toggle').checkbox({
-    onChange: function() {
+    onChange: function () {
       const enabled = $('input[name="s3_enabled"]').is(':checked');
       if (enabled) {
         $('#addInstanceS3Fields').show();
@@ -105,7 +105,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Initialize add instance HMAC toggle
   $('#addInstanceHmacToggle').checkbox({
-    onChange: function() {
+    onChange: function () {
       const enabled = $('input[name="hmac_enabled"]').is(':checked');
       if (enabled) {
         $('#addInstanceHmacKeyWarningMessage').show();
@@ -120,15 +120,15 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // Handle admin login button click
-  adminLoginBtn.addEventListener('click', function() {
+  adminLoginBtn.addEventListener('click', function () {
     isAdminLogin = true;
     loginForm.classList.add('loading');
-    
+
     // Change button appearance to show admin mode
     adminLoginBtn.classList.add('teal');
     adminLoginBtn.innerHTML = '<i class="shield alternate icon"></i> Admin Mode';
     $('#loginToken').val('').focus();
-    
+
     // Show admin-specific instructions
     $('.ui.info.message').html(`
         <div class="header mb-4">
@@ -140,38 +140,38 @@ document.addEventListener('DOMContentLoaded', function() {
             <li>Use your admin token in the field above</li>
         </ul>
     `);
-    
+
     // Focus on token input
     loginTokenInput.focus();
     loginForm.classList.remove('loading');
   });
 
   // Handle form submission
-  loginForm.addEventListener('submit', function(e) {
+  loginForm.addEventListener('submit', function (e) {
     e.preventDefault();
-    
+
     const token = loginTokenInput.value.trim();
-    
+
     if (!token) {
-        showError('Please enter your access token');
-        $('#loginToken').focus();
-        return;
+      showError('Please enter your access token');
+      $('#loginToken').focus();
+      return;
     }
-    
+
     loginForm.classList.add('loading');
-     
+
     setTimeout(() => {
-        if (isAdminLogin) {
-            handleAdminLogin(token,true);
-        } else {
-            handleRegularLogin(token,true);
-        }
-        
-        loginForm.classList.remove('loading');
+      if (isAdminLogin) {
+        handleAdminLogin(token, true);
+      } else {
+        handleRegularLogin(token, true);
+      }
+
+      loginForm.classList.remove('loading');
     }, 1000);
   });
 
-  $('#menulogout').on('click',function(e) {
+  $('#menulogout').on('click', function (e) {
     $('.adminlogin').hide();
     e.preventDefault();
     removeLocalStorageItem('isAdmin');
@@ -183,12 +183,12 @@ document.addEventListener('DOMContentLoaded', function() {
     return false;
   });
 
-  document.getElementById('pairphoneinput').addEventListener('keypress', function(e) {
+  document.getElementById('pairphoneinput').addEventListener('keypress', function (e) {
     if (e.key === 'Enter') {
       const phone = pairPhoneInput.value.trim();
       if (phone) {
         connect().then((data) => {
-          if(data.success==true) {
+          if (data.success == true) {
             pairPhone(phone)
               .then((data) => {
                 document.getElementById('pairHelp').classList.add('hidden');;
@@ -206,82 +206,90 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Pairing error:', error);
               });
           }
-      });
+        });
       }
     }
   });
 
-  document.getElementById('userinfoinput').addEventListener('keypress', function(e) {
+  document.getElementById('userinfoinput').addEventListener('keypress', function (e) {
     if (e.key === 'Enter') {
       doUserInfo();
     }
   });
- 
-  document.getElementById('useravatarinput').addEventListener('keypress', function(e) {
+
+  document.getElementById('useravatarinput').addEventListener('keypress', function (e) {
     if (e.key === 'Enter') {
       doUserAvatar();
     }
   });
 
-  document.getElementById('userInfo').addEventListener('click', function() {
-    document.getElementById('userInfoContainer').innerHTML='';
+  document.getElementById('userInfo').addEventListener('click', function () {
+    document.getElementById('userInfoContainer').innerHTML = '';
     document.getElementById("userInfoContainer").classList.add('hidden');
-    $('#modalUserInfo').modal({onApprove: function() {
-      doUserInfo();
-      return false;
-    }}).modal('show');
+    $('#modalUserInfo').modal({
+      onApprove: function () {
+        doUserInfo();
+        return false;
+      }
+    }).modal('show');
   });
 
-  document.getElementById('userAvatar').addEventListener('click', function() {
-    document.getElementById('userAvatarContainer').innerHTML='';
+  document.getElementById('userAvatar').addEventListener('click', function () {
+    document.getElementById('userAvatarContainer').innerHTML = '';
     document.getElementById("userAvatarContainer").classList.add('hidden');
-    $('#modalUserAvatar').modal({onApprove: function() {
-      doUserAvatar();
-      return false;
-    }}).modal('show');
+    $('#modalUserAvatar').modal({
+      onApprove: function () {
+        doUserAvatar();
+        return false;
+      }
+    }).modal('show');
   });
 
-  document.getElementById('sendTextMessage').addEventListener('click', function() {
-    document.getElementById('sendMessageContainer').innerHTML='';
+  document.getElementById('sendTextMessage').addEventListener('click', function () {
+    document.getElementById('sendMessageContainer').innerHTML = '';
     document.getElementById("sendMessageContainer").classList.add('hidden');
-    $('#modalSendTextMessage').modal({onApprove: function() {
-      sendTextMessage().then((result)=>{
-        document.getElementById("sendMessageContainer").classList.remove('hidden');
-        if(result.success===true) {
-           document.getElementById('sendMessageContainer').innerHTML=`Message sent successfully. Id: ${result.data.Id}`
-        } else {
-           document.getElementById('sendMessageContainer').innerHTML=`Problem sending message: ${result.error}`
-        }
-      });
-      return false;
-    }}).modal('show');
+    $('#modalSendTextMessage').modal({
+      onApprove: function () {
+        sendTextMessage().then((result) => {
+          document.getElementById("sendMessageContainer").classList.remove('hidden');
+          if (result.success === true) {
+            document.getElementById('sendMessageContainer').innerHTML = `Message sent successfully. Id: ${result.data.Id}`
+          } else {
+            document.getElementById('sendMessageContainer').innerHTML = `Problem sending message: ${result.error}`
+          }
+        });
+        return false;
+      }
+    }).modal('show');
   });
- 
-  document.getElementById('deleteMessage').addEventListener('click', function() {
-    document.getElementById('deleteMessageContainer').innerHTML='';
+
+  document.getElementById('deleteMessage').addEventListener('click', function () {
+    document.getElementById('deleteMessageContainer').innerHTML = '';
     document.getElementById("deleteMessageContainer").classList.add('hidden');
-    $('#modalDeleteMessage').modal({onApprove: function() {
-      deleteMessage().then((result)=>{
-        console.log(result);
-        document.getElementById("deleteMessageContainer").classList.remove('hidden');
-        if(result.success===true) {
-           document.getElementById('deleteMessageContainer').innerHTML=`Message deleted successfully.`
-        } else {
-           document.getElementById('deleteMessageContainer').innerHTML=`Problem deleting message: ${result.error}`
-        }
-      });
-      return false;
-    }}).modal('show');
+    $('#modalDeleteMessage').modal({
+      onApprove: function () {
+        deleteMessage().then((result) => {
+          console.log(result);
+          document.getElementById("deleteMessageContainer").classList.remove('hidden');
+          if (result.success === true) {
+            document.getElementById('deleteMessageContainer').innerHTML = `Message deleted successfully.`
+          } else {
+            document.getElementById('deleteMessageContainer').innerHTML = `Problem deleting message: ${result.error}`
+          }
+        });
+        return false;
+      }
+    }).modal('show');
   });
-  
-  document.getElementById('userContacts').addEventListener('click', function() {
+
+  document.getElementById('userContacts').addEventListener('click', function () {
     getContacts();
   });
 
   // S3 Configuration
-  document.getElementById('s3Config').addEventListener('click', function() {
+  document.getElementById('s3Config').addEventListener('click', function () {
     $('#modalS3Config').modal({
-      onApprove: function() {
+      onApprove: function () {
         saveS3Config();
         return false;
       }
@@ -290,9 +298,9 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // History Configuration
-  document.getElementById('historyConfig').addEventListener('click', function() {
+  document.getElementById('historyConfig').addEventListener('click', function () {
     $('#modalHistoryConfig').modal({
-      onApprove: function() {
+      onApprove: function () {
         saveHistoryConfig();
         return false;
       }
@@ -301,9 +309,9 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // Proxy Configuration
-  document.getElementById('proxyConfig').addEventListener('click', function() {
+  document.getElementById('proxyConfig').addEventListener('click', function () {
     $('#modalProxyConfig').modal({
-      onApprove: function() {
+      onApprove: function () {
         saveProxyConfig();
         return false;
       }
@@ -312,24 +320,24 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // Webhook Configuration
-  document.getElementById('webhookConfig').addEventListener('click', function() {
+  document.getElementById('webhookConfig').addEventListener('click', function () {
     webhookModal();
   });
 
   // S3 Test Connection
-  document.getElementById('testS3Connection').addEventListener('click', function() {
+  document.getElementById('testS3Connection').addEventListener('click', function () {
     testS3Connection();
   });
 
   // S3 Delete Configuration
-  document.getElementById('deleteS3Config').addEventListener('click', function() {
+  document.getElementById('deleteS3Config').addEventListener('click', function () {
     deleteS3Config();
   });
 
   // HMAC Configuration
-  document.getElementById('hmacConfig').addEventListener('click', function() {
+  document.getElementById('hmacConfig').addEventListener('click', function () {
     $('#modalHmacConfig').modal({
-      onApprove: function() {
+      onApprove: function () {
         saveHmacConfig();
         return false;
       }
@@ -338,60 +346,63 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // Chatwoot Configuration
-  document.getElementById('chatwootConfig').addEventListener('click', function() {
-    $('#modalChatwootConfig').modal({
-      onApprove: function() {
-        saveChatwootConfig();
-        return false;
-      }
-    }).modal('show');
-    loadChatwootConfig();
-  });
+  const chatwootConfigBtn = document.getElementById('chatwootConfig');
+  if (chatwootConfigBtn) {
+    chatwootConfigBtn.addEventListener('click', function () {
+      $('#modalChatwootConfig').modal({
+        onApprove: function () {
+          saveChatwootConfig();
+          return false;
+        }
+      }).modal('show');
+      loadChatwootConfig();
+    });
+  }
 
   // HMAC Generate Key
-  document.getElementById('generateHmacKey').addEventListener('click', function() {
+  document.getElementById('generateHmacKey').addEventListener('click', function () {
     generateRandomHmacKey();
   });
 
   // HMAC Show/Hide Key
-  document.getElementById('showHmacKey').addEventListener('click', function() {
+  document.getElementById('showHmacKey').addEventListener('click', function () {
     toggleHmacKeyVisibility();
   });
 
-  document.getElementById('hideHmacKey').addEventListener('click', function() {
+  document.getElementById('hideHmacKey').addEventListener('click', function () {
     toggleHmacKeyVisibility();
   });
 
   // HMAC Delete Configuration
-  document.getElementById('deleteHmacConfig').addEventListener('click', function() {
+  document.getElementById('deleteHmacConfig').addEventListener('click', function () {
     deleteHmacConfig();
   });
 
   // HMAC Instance Generate Key
-  document.getElementById('generateHmacKeyInstance').addEventListener('click', function() {
+  document.getElementById('generateHmacKeyInstance').addEventListener('click', function () {
     generateRandomHmacKeyInstance();
   });
 
   // HMAC Instance Show/Hide Key
-  document.getElementById('showHmacKeyInstance').addEventListener('click', function() {
+  document.getElementById('showHmacKeyInstance').addEventListener('click', function () {
     toggleHmacKeyVisibilityInstance();
   });
 
-  document.getElementById('hideHmacKeyInstance').addEventListener('click', function() {
+  document.getElementById('hideHmacKeyInstance').addEventListener('click', function () {
     toggleHmacKeyVisibilityInstance();
   });
 
   // Proxy checkbox toggle is now initialized in DOMContentLoaded
 
-  $('#addInstanceButton').click(function() {
+  $('#addInstanceButton').click(function () {
     $('#addInstanceModal').modal({
-      onApprove: function(e,pp) {
-         $('#addInstanceForm').submit();
-         return false;
+      onApprove: function (e, pp) {
+        $('#addInstanceForm').submit();
+        return false;
       }
     }).modal('show');
   });
-  
+
   $('#addInstanceForm').form({
     fields: {
       name: {
@@ -448,7 +459,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }]
       }
     },
-    onSuccess: function(event, fields) {
+    onSuccess: function (event, fields) {
       event.preventDefault();
 
       // Validate conditional fields
@@ -528,7 +539,7 @@ async function addInstance(data) {
     enabled: proxyEnabled,
     proxyURL: proxyEnabled ? (data.proxy_url || '') : ''
   };
-  
+
   // Build S3 configuration
   const s3Enabled = data.s3_enabled === 'on' || data.s3_enabled === true;
   const s3PathStyle = data.s3_path_style === 'on' || data.s3_path_style === true;
@@ -584,7 +595,7 @@ async function loadChatwootConfig() {
       method: "GET",
       headers: myHeaders
     });
-    
+
     if (res.ok) {
       const data = await res.json();
       $('#chatwootUrl').val(data.url || '');
@@ -637,53 +648,55 @@ async function saveChatwootConfig() {
 }
 
 function webhookModal() {
-  getWebhook().then((response)=>{
-    if(response.success==true) {
+  getWebhook().then((response) => {
+    if (response.success == true) {
       $('#webhookEvents').val(response.data.subscribe);
       $('#webhookEvents').dropdown('set selected', response.data.subscribe);
       $('#webhookinput').val(response.data.webhook);
-      $('#modalSetWebhook').modal({onApprove: function() {
-        setWebhook().then((result)=>{
-          if(result.success===true) {
-             $.toast({ class: 'success', message: `Webhook set successfully !`});
-          } else {
-             $.toast({ class: 'error', message: `Problem setting webhook: ${result.error}`});
-          }
-        });
-        return true;
-      }}).modal('show');
+      $('#modalSetWebhook').modal({
+        onApprove: function () {
+          setWebhook().then((result) => {
+            if (result.success === true) {
+              $.toast({ class: 'success', message: `Webhook set successfully !` });
+            } else {
+              $.toast({ class: 'error', message: `Problem setting webhook: ${result.error}` });
+            }
+          });
+          return true;
+        }
+      }).modal('show');
     }
   });
 }
 
 function modalPairPhone() {
   $('#modalLoginWithCode').modal({
-     onVisible: function() {
-       document.getElementById('pairInfo').classList.remove('hidden');;
-       document.getElementById('pairHelp').classList.remove('hidden');;
-     },
-     onHidden: function() {
-       if(scanned==true) {
-           document.getElementById('loginQR').classList.add('hidden');
-           document.getElementById('loginCode').classList.add('hidden');
-           document.getElementById('logoutWidget').classList.remove('hidden');
-       }
-     }
-   })
-   .modal('show');
+    onVisible: function () {
+      document.getElementById('pairInfo').classList.remove('hidden');;
+      document.getElementById('pairHelp').classList.remove('hidden');;
+    },
+    onHidden: function () {
+      if (scanned == true) {
+        document.getElementById('loginQR').classList.add('hidden');
+        document.getElementById('loginCode').classList.add('hidden');
+        document.getElementById('logoutWidget').classList.remove('hidden');
+      }
+    }
+  })
+    .modal('show');
 }
 
-function handleRegularLogin(token,notifications=false) {
+function handleRegularLogin(token, notifications = false) {
   console.log('Regular login with token:', token);
   setLocalStorageItem('token', token, 6);
   removeLocalStorageItem('isAdmin');
   $('.adminlogin').hide();
   statusRequest().then((status) => {
-    if(status.success==true) {
+    if (status.success == true) {
       console.log(status.data);
       setLocalStorageItem('currentInstance', status.data.id, 6);
       // Save current user JID for groups functionality
-      if(status.data.jid) {
+      if (status.data.jid) {
         setLocalStorageItem('currentUserJID', status.data.jid, 6);
         window.currentUserJID = status.data.jid;
       }
@@ -694,7 +707,7 @@ function handleRegularLogin(token,notifications=false) {
       $('.maingrid').removeClass('hidden');
       $('.adminlogin').hide();
       showWidgets();
-      $('#'+status.data.instanceId).removeClass('hidden');
+      $('#' + status.data.instanceId).removeClass('hidden');
       updateUser();
     } else {
       removeLocalStorageItem('token');
@@ -703,46 +716,46 @@ function handleRegularLogin(token,notifications=false) {
     }
   });
 }
-  
+
 function updateUser() {
   // retrieves one instance status at regular interval
-  status().then((result)=> {
-    if(result.success==true) {
+  status().then((result) => {
+    if (result.success == true) {
       // Save current user JID for groups functionality
-      if(result.data.jid) {
+      if (result.data.jid) {
         setLocalStorageItem('currentUserJID', result.data.jid, 6);
         window.currentUserJID = result.data.jid;
       }
       populateInstances([result.data]);
-    } 
+    }
   });
   clearTimeout(updateUserTimeout)
-  updateUserTimeout = setTimeout(function() { updateUser() }, updateInterval);
+  updateUserTimeout = setTimeout(function () { updateUser() }, updateInterval);
 }
 
 function updateAdmin() {
   // retrieves all instances status at regular intervals
   const current = getLocalStorageItem("currentInstance")
-  if(!current) {
+  if (!current) {
     // get all instances status
     getUsers().then((result) => {
-      if(result.success==true) {
+      if (result.success == true) {
         populateInstances(result.data)
-      } 
+      }
     });
   } else {
     // get only active instance status
-    status().then((result)=> {
-      if(result.success==true) {
+    status().then((result) => {
+      if (result.success == true) {
         populateInstances([result.data]);
-      } 
+      }
     });
   }
   clearTimeout(updateAdminTimeout)
-  updateAdminTimeout = setTimeout(function() { updateAdmin() }, updateInterval);
+  updateAdminTimeout = setTimeout(function () { updateAdmin() }, updateInterval);
 }
 
-function handleAdminLogin(token,notifications=false) {
+function handleAdminLogin(token, notifications = false) {
   console.log('Admin login with token:', token);
   setLocalStorageItem('admintoken', token, 6);
   setLocalStorageItem('isAdmin', true, 6);
@@ -750,19 +763,19 @@ function handleAdminLogin(token,notifications=false) {
   const currentInstance = getLocalStorageItem("currentInstance");
 
   getUsers().then((result) => {
-    if(result.success==true) {
+    if (result.success == true) {
 
       showAdminUser();
 
-      if(currentInstance == null) {
+      if (currentInstance == null) {
         $('.admingrid').removeClass('hidden');
         populateInstances(result.data);
       } else {
         populateInstances(result.data);
         $('.maingrid').removeClass('hidden');
         showWidgets();
-        const showInstanceId=`instance-card-${currentInstance}`
-        $('#'+showInstanceId).removeClass('hidden');
+        const showInstanceId = `instance-card-${currentInstance}`
+        $('#' + showInstanceId).removeClass('hidden');
       }
       $('#loading').removeClass('active');
       $('.logingrid').addClass('hidden');
@@ -776,7 +789,7 @@ function handleAdminLogin(token,notifications=false) {
     }
   });
 }
-    
+
 function showError(message) {
   $('body').toast({
     class: 'error',
@@ -786,7 +799,7 @@ function showError(message) {
     showProgress: 'bottom'
   });
 }
-    
+
 function showSuccess(message) {
   $('body').toast({
     class: 'success',
@@ -800,7 +813,7 @@ function showSuccess(message) {
 function deleteInstance(id) {
   instanceToDelete = id;
   $('#deleteInstanceModal').modal({
-    onApprove: function() {
+    onApprove: function () {
       performDelete(instanceToDelete);
     }
   }).modal('show');
@@ -812,12 +825,12 @@ async function performDelete(id) {
   const myHeaders = new Headers();
   myHeaders.append('authorization', admintoken);
   myHeaders.append('Content-Type', 'application/json');
-  res = await fetch(baseUrl + "/admin/users/"+id+"/full", {
+  res = await fetch(baseUrl + "/admin/users/" + id + "/full", {
     method: "DELETE",
     headers: myHeaders
   });
   data = await res.json();
-  if(data.success===true) {
+  if (data.success === true) {
     $('#instance-row-' + id).remove();
     showDeleteSuccess();
   } else {
@@ -834,7 +847,7 @@ function showDeleteSuccess() {
   });
 }
 
-function openDashboard(id,token) {
+function openDashboard(id, token) {
   setLocalStorageItem('currentInstance', id, 6);
   setLocalStorageItem('token', token, 6);
   $(`#instance-card-${id}`).removeClass('hidden');
@@ -870,12 +883,12 @@ async function sendTextMessage() {
   res = await fetch(baseUrl + "/chat/send/text", {
     method: "POST",
     headers: myHeaders,
-    body: JSON.stringify({Phone: sendPhone, Body: sendBody, Id: uuid})
+    body: JSON.stringify({ Phone: sendPhone, Body: sendBody, Id: uuid })
   });
   data = await res.json();
   return data;
 }
- 
+
 async function deleteMessage() {
   const deletePhone = document.getElementById('messagedeletephone').value.trim();
   const deleteId = document.getElementById('messagedeleteid').value;
@@ -885,12 +898,12 @@ async function deleteMessage() {
   res = await fetch(baseUrl + "/chat/delete", {
     method: "POST",
     headers: myHeaders,
-    body: JSON.stringify({Phone: deletePhone, Id: deleteId})
+    body: JSON.stringify({ Phone: deletePhone, Id: deleteId })
   });
   data = await res.json();
   return data;
 }
- 
+
 async function setWebhook() {
   const token = getLocalStorageItem('token');
   const webhook = document.getElementById('webhookinput').value.trim();
@@ -905,12 +918,12 @@ async function setWebhook() {
   res = await fetch(baseUrl + "/webhook", {
     method: "POST",
     headers: myHeaders,
-    body: JSON.stringify({webhookurl: webhook, events: events})
+    body: JSON.stringify({ webhookurl: webhook, events: events })
   });
   data = await res.json();
   return data;
 }
- 
+
 function doUserAvatar() {
   const userAvatarInput = document.getElementById('useravatarinput');
   let phone = userAvatarInput.value.trim();
@@ -922,16 +935,16 @@ function doUserAvatar() {
       document.getElementById("userAvatarContainer").classList.remove('hidden');
       if (data.success && data.data && data.data.url) {
         const userAvatarDiv = document.getElementById('userAvatarContainer');
-        userAvatarDiv.innerHTML=`<img src="${data.data.url}" alt="Profile Picture" class="user-avatar">`;
+        userAvatarDiv.innerHTML = `<img src="${data.data.url}" alt="Profile Picture" class="user-avatar">`;
       } else {
-          document.getElementById('userAvatarContainer').innerHTML = 'No user avatar found';
+        document.getElementById('userAvatarContainer').innerHTML = 'No user avatar found';
       }
     }).catch(error => {
       document.getElementById('userAvatarContainer').innerHTML = 'Error fetching user avatar';
       console.error('Error:', error);
     });
   }
-} 
+}
 
 function doUserInfo() {
   const userInfoInput = document.getElementById('userinfoinput');
@@ -943,24 +956,24 @@ function doUserInfo() {
     userInfo(phone).then((data) => {
       document.getElementById("userInfoContainer").classList.remove('hidden');
       if (data.success && data.data && data.data.Users) {
-          const userInfoDiv = document.getElementById('userInfoContainer');
-          userInfoDiv.innerHTML = '';
-          
-          for (const [userJid, userData] of Object.entries(data.data.Users)) {
-              const userElement = document.createElement('div');
-              userElement.className = 'user-entry';
-              
-              const phoneNumber = userJid.split('@')[0];
-              userElement.innerHTML += `<strong>Phone: ${phoneNumber}</strong><br>`;
-              userElement.innerHTML += `Status: ${userData.Status || 'Not available'}<br>`;
-              userElement.innerHTML += `Verified Name: ${userData.VerifiedName || 'Not verified'}<br>`;
-              if (userData.Devices && userData.Devices.length > 0) {
-                  userElement.innerHTML += `Devices: ${userData.Devices.length}<br>`;
-              }
-              userInfoDiv.appendChild(userElement);
+        const userInfoDiv = document.getElementById('userInfoContainer');
+        userInfoDiv.innerHTML = '';
+
+        for (const [userJid, userData] of Object.entries(data.data.Users)) {
+          const userElement = document.createElement('div');
+          userElement.className = 'user-entry';
+
+          const phoneNumber = userJid.split('@')[0];
+          userElement.innerHTML += `<strong>Phone: ${phoneNumber}</strong><br>`;
+          userElement.innerHTML += `Status: ${userData.Status || 'Not available'}<br>`;
+          userElement.innerHTML += `Verified Name: ${userData.VerifiedName || 'Not verified'}<br>`;
+          if (userData.Devices && userData.Devices.length > 0) {
+            userElement.innerHTML += `Devices: ${userData.Devices.length}<br>`;
           }
+          userInfoDiv.appendChild(userElement);
+        }
       } else {
-          document.getElementById('userInfoContainer').innerHTML = 'No user data found';
+        document.getElementById('userInfoContainer').innerHTML = 'No user data found';
       }
     }).catch(error => {
       document.getElementById('userInfoContainer').innerHTML = 'Error fetching user info';
@@ -981,10 +994,10 @@ function hideWidgets() {
   });
 }
 
-async function connect(token='') {
+async function connect(token = '') {
   console.log("Connecting...");
-  if(token=='') {
-     token = getLocalStorageItem('token');
+  if (token == '') {
+    token = getLocalStorageItem('token');
   }
   const myHeaders = new Headers();
   myHeaders.append('token', token);
@@ -992,17 +1005,17 @@ async function connect(token='') {
   res = await fetch(baseUrl + "/session/connect", {
     method: "POST",
     headers: myHeaders,
-    body: JSON.stringify({Subscribe: ['All'], Immediate: true})
+    body: JSON.stringify({ Subscribe: ['All'], Immediate: true })
   });
   data = await res.json();
-  updateInterval=1000; // Decrease interval to react quicker to QR scan
+  updateInterval = 1000; // Decrease interval to react quicker to QR scan
   return data;
 }
 
 async function disconnect(token) {
   console.log("Disconnecting...");
-  if(token=='') {
-     token = getLocalStorageItem('token');
+  if (token == '') {
+    token = getLocalStorageItem('token');
   }
   const myHeaders = new Headers();
   myHeaders.append('token', token);
@@ -1026,7 +1039,7 @@ async function status() {
     headers: myHeaders
   });
   data = await res.json();
-  if(data.data.loggedIn==true) updateInterval=5000;
+  if (data.data.loggedIn == true) updateInterval = 5000;
   return data;
 }
 
@@ -1044,9 +1057,9 @@ async function getUsers() {
   return data;
 }
 
-async function getWebhook(token='') {
+async function getWebhook(token = '') {
   console.log("Getting webhook...");
-  if(token=='') {
+  if (token == '') {
     token = getLocalStorageItem('token');
   }
   const myHeaders = new Headers();
@@ -1079,9 +1092,9 @@ async function getContacts() {
     data = await res.json();
     if (data.code === 200) {
       const transformedContacts = Object.entries(data.data).map(([phone, contact]) => ({
-          FullName: contact.FullName || "",
-          PushName: contact.PushName || "",
-          Phone: phone.split('@')[0] // Remove the @s.whatsapp.net part
+        FullName: contact.FullName || "",
+        PushName: contact.PushName || "",
+        Phone: phone.split('@')[0] // Remove the @s.whatsapp.net part
       }));
       downloadJson(transformedContacts, 'contacts.json');
       return transformedContacts;
@@ -1103,7 +1116,7 @@ async function userAvatar(phone) {
   res = await fetch(baseUrl + "/user/avatar", {
     method: "POST",
     headers: myHeaders,
-    body: JSON.stringify({Phone: phone, Preview: false})
+    body: JSON.stringify({ Phone: phone, Preview: false })
   });
   data = await res.json();
   return data;
@@ -1118,7 +1131,7 @@ async function userInfo(phone) {
   res = await fetch(baseUrl + "/user/info", {
     method: "POST",
     headers: myHeaders,
-    body: JSON.stringify({Phone: [phone]})
+    body: JSON.stringify({ Phone: [phone] })
   });
   data = await res.json();
   return data;
@@ -1133,15 +1146,15 @@ async function pairPhone(phone) {
   res = await fetch(baseUrl + "/session/pairphone", {
     method: "POST",
     headers: myHeaders,
-    body: JSON.stringify({Phone: phone})
+    body: JSON.stringify({ Phone: phone })
   });
   data = await res.json();
   return data;
 }
 
-async function logout(token='') {
+async function logout(token = '') {
   console.log("Login out...");
-  if(token=='') {
+  if (token == '') {
     token = getLocalStorageItem('token');
   }
   const myHeaders = new Headers();
@@ -1171,7 +1184,7 @@ async function statusRequest() {
   const myHeaders = new Headers();
   const token = getLocalStorageItem('token');
   const isAdminLogin = getLocalStorageItem('isAdmin');
-  if(token!=null && isAdminLogin==null) {
+  if (token != null && isAdminLogin == null) {
     myHeaders.append('token', token);
     res = await fetch(baseUrl + "/session/status", {
       method: "GET",
@@ -1184,18 +1197,18 @@ async function statusRequest() {
 
 function parseURLParams(url) {
   var queryStart = url.indexOf("?") + 1,
-      queryEnd   = url.indexOf("#") + 1 || url.length + 1,
-      query = url.slice(queryStart, queryEnd - 1),
-      pairs = query.replace(/\+/g, " ").split("&"),
-      parms = {}, i, n, v, nv;
+    queryEnd = url.indexOf("#") + 1 || url.length + 1,
+    query = url.slice(queryStart, queryEnd - 1),
+    pairs = query.replace(/\+/g, " ").split("&"),
+    parms = {}, i, n, v, nv;
 
   if (query === url || query === "") return;
-    for (i = 0; i < pairs.length; i++) {
-      nv = pairs[i].split("=", 2);
-      n = decodeURIComponent(nv[0]);
-      v = decodeURIComponent(nv[1]);
-      if (!parms.hasOwnProperty(n)) parms[n] = [];
-      parms[n].push(nv.length === 2 ? v : null);
+  for (i = 0; i < pairs.length; i++) {
+    nv = pairs[i].split("=", 2);
+    n = decodeURIComponent(nv[0]);
+    v = decodeURIComponent(nv[1]);
+    if (!parms.hasOwnProperty(n)) parms[n] = [];
+    parms[n].push(nv.length === 2 ? v : null);
   }
   return parms;
 }
@@ -1204,39 +1217,39 @@ function downloadJson(data, filename) {
   const jsonStr = JSON.stringify(data, null, 2);
   const blob = new Blob([jsonStr], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
-  
+
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);
   a.click();
-  
+
   // Cleanup
   setTimeout(() => {
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }, 100);
 }
 
 function generateMessageUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
     const r = Math.random() * 16 | 0;
     const v = c === 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
   });
 }
 
-function init() { 
+function init() {
 
   // Starting
-  let notoken=0;
+  let notoken = 0;
   let scanInterval;
   let token = getLocalStorageItem('token');
   let admintoken = getLocalStorageItem('admintoken');
   let isAdminLogin = getLocalStorageItem('isAdmin');
   $('.adminlogin').hide();
 
-  if(token == null && admintoken == null) {
+  if (token == null && admintoken == null) {
     $('.logingrid').removeClass('hidden');
     $('.maingrid').addClass('hidden');
   } else {
@@ -1255,13 +1268,13 @@ function populateInstances(instances) {
   cardsContainer.empty();
   const currentInstance = getLocalStorageItem('currentInstance');
 
-  if(instances.length==0) {
+  if (instances.length == 0) {
     const nodatarow = '<tr><td style="text-align:center;" colspan=5>No instances found</td></tr>'
     tableBody.append(nodatarow);
   }
   instances.forEach(instance => {
 
-  const row = `
+    const row = `
       <tr>
         <td>${instance.id}</td>
         <td>${instance.name}</td>
@@ -1277,9 +1290,9 @@ function populateInstances(instances) {
         </td>
       </tr>
   `;
-  tableBody.append(row);
+    tableBody.append(row);
 
-  const card = `
+    const card = `
       <div class="ui fluid card hidden no-hover" id="instance-card-${instance.id}">
           <div class="content">
               <div class="ui ${instance.loggedIn ? 'one' : 'two'} column stackable grid">
@@ -1349,17 +1362,17 @@ function populateInstances(instances) {
                   ${!instance.loggedIn ? `
                   <div class="column" style="display: flex; flex-direction: column; justify-content: center; align-items: center;">
                       <div class="ui segment" style="width: 100%; max-width: 200px; height: 200px; display: flex; justify-content: center; align-items: center;">
-                        ${instance.qrcode ? 
-                          `<img src="${instance.qrcode}" style="max-height: 100%; max-width: 100%;">
+                        ${instance.qrcode ?
+          `<img src="${instance.qrcode}" style="max-height: 100%; max-width: 100%;">
                       </div>
                       <div>
                         Open WhatsApp on your phone and tap<br/><i class="ellipsis vertical icon"></i>> Linked devices > Link a device.
-                          ` : 
-                                `<div class="ui icon header" style="text-align: center;">
+                          ` :
+          `<div class="ui icon header" style="text-align: center;">
                                     <i class="qrcode icon" style="font-size: 3em;"></i>
                                     <div class="sub header">QR Code will appear here</div>
                                 </div>`
-                           }
+        }
                       </div>
                     </div>
                     ` : `
@@ -1377,16 +1390,16 @@ function populateInstances(instances) {
         `;
     cardsContainer.append(card);
   });
-  if(currentInstance!==null) {
-     const showInstanceId=`instance-card-${currentInstance}`
-     $('#'+showInstanceId).removeClass('hidden');
-     
-     // Store current instance data globally for use in modals
-     const currentInstanceObj = instances.find(inst => inst.id === currentInstance);
-     if (currentInstanceObj) {
-       currentInstanceData = currentInstanceObj;
-     }
-  } 
+  if (currentInstance !== null) {
+    const showInstanceId = `instance-card-${currentInstance}`
+    $('#' + showInstanceId).removeClass('hidden');
+
+    // Store current instance data globally for use in modals
+    const currentInstanceObj = instances.find(inst => inst.id === currentInstance);
+    if (currentInstanceObj) {
+      currentInstanceData = currentInstanceObj;
+    }
+  }
 }
 
 /**
@@ -1452,18 +1465,18 @@ function clearLocalStorage() {
 function showAdminUser() {
   const indicator = document.getElementById('user-role-indicator');
   const text = document.getElementById('user-role-text');
-  
+
   indicator.className = 'item admin';
   indicator.innerHTML = `
     <i class="user shield icon"></i>
     <div class="ui mini label">ADMIN</div>
   `;
 }
-  
+
 function showRegularUser() {
   const indicator = document.getElementById('user-role-indicator');
   const text = document.getElementById('user-role-text');
-  
+
   indicator.className = 'item user';
   indicator.innerHTML = `
     <i class="user icon"></i>
@@ -1477,7 +1490,7 @@ async function loadS3Config() {
   if (currentInstanceData && currentInstanceData.s3_config) {
     const s3Config = currentInstanceData.s3_config;
     const hasConfig = s3Config.enabled || s3Config.endpoint || s3Config.bucket;
-    
+
     $('#s3Endpoint').val(s3Config.endpoint || '');
     $('#s3AccessKey').val(s3Config.access_key === '***' ? '' : s3Config.access_key || '');
     $('#s3SecretKey').val(''); // Never show secret key
@@ -1485,39 +1498,39 @@ async function loadS3Config() {
     $('#s3Region').val(s3Config.region || '');
     $('#s3ForcePathStyle').prop('checked', s3Config.path_style || false);
     $('#s3PublicUrl').val(s3Config.public_url || '');
-    
+
     // Media delivery dropdown
     $('#s3MediaDelivery').dropdown('set selected', s3Config.media_delivery || 'base64');
-    
+
     // Retention days
     $('#s3RetentionDays').val(s3Config.retention_days || 30);
-    
+
     // Show/hide delete button based on whether config exists
     if (hasConfig) {
       $('#deleteS3Config').show();
     } else {
       $('#deleteS3Config').hide();
     }
-    
+
     return;
   }
-  
+
   // Fallback to API call for regular users or when instance data is not available
   const token = getLocalStorageItem('token');
   const myHeaders = new Headers();
   myHeaders.append('token', token);
-  
+
   try {
     const res = await fetch(baseUrl + "/session/s3/config", {
       method: "GET",
       headers: myHeaders
     });
-    
+
     if (res.ok) {
       const data = await res.json();
       if (data.code === 200 && data.data) {
         const hasConfig = data.data.enabled || data.data.endpoint || data.data.bucket;
-        
+
         $('#s3Endpoint').val(data.data.endpoint || '');
         $('#s3AccessKey').val(data.data.access_key === '***' ? '' : data.data.access_key);
         $('#s3SecretKey').val(''); // Never show secret key
@@ -1525,13 +1538,13 @@ async function loadS3Config() {
         $('#s3Region').val(data.data.region || '');
         $('#s3ForcePathStyle').prop('checked', data.data.path_style || false);
         $('#s3PublicUrl').val(data.data.public_url || '');
-        
+
         // Media delivery dropdown
         $('#s3MediaDelivery').dropdown('set selected', data.data.media_delivery || 'base64');
-        
+
         // Retention days
         $('#s3RetentionDays').val(data.data.retention_days || 30);
-        
+
         // Show/hide delete button based on whether config exists
         if (hasConfig) {
           $('#deleteS3Config').show();
@@ -1563,7 +1576,7 @@ async function saveS3Config() {
   const myHeaders = new Headers();
   myHeaders.append('token', token);
   myHeaders.append('Content-Type', 'application/json');
-  
+
   const config = {
     enabled: true,
     endpoint: $('#s3Endpoint').val().trim(),
@@ -1576,14 +1589,14 @@ async function saveS3Config() {
     media_delivery: $('#s3MediaDelivery').val() || 'base64',
     retention_days: parseInt($('#s3RetentionDays').val()) || 30
   };
-  
+
   try {
     const res = await fetch(baseUrl + "/session/s3/config", {
       method: "POST",
       headers: myHeaders,
       body: JSON.stringify(config)
     });
-    
+
     const data = await res.json();
     if (data.success) {
       showSuccess('S3 configuration saved successfully');
@@ -1603,16 +1616,16 @@ async function testS3Connection() {
   const token = getLocalStorageItem('token');
   const myHeaders = new Headers();
   myHeaders.append('token', token);
-  
+
   // Show loading state
   $('#testS3Connection').addClass('loading disabled');
-  
+
   try {
     const res = await fetch(baseUrl + "/session/s3/test", {
       method: "POST",
       headers: myHeaders
     });
-    
+
     const data = await res.json();
     if (data.success) {
       showSuccess('S3 connection test successful!');
@@ -1632,24 +1645,24 @@ async function deleteS3Config() {
   if (!confirm('Are you sure you want to delete the S3 configuration? This action cannot be undone.')) {
     return;
   }
-  
+
   const token = getLocalStorageItem('token');
   const myHeaders = new Headers();
   myHeaders.append('token', token);
-  
+
   // Show loading state
   $('#deleteS3Config').addClass('loading disabled');
-  
+
   try {
     const res = await fetch(baseUrl + "/session/s3/config", {
       method: "DELETE",
       headers: myHeaders
     });
-    
+
     const data = await res.json();
     if (data.success) {
       showSuccess('S3 configuration deleted successfully');
-      
+
       // Clear all form fields
       $('#s3Endpoint').val('');
       $('#s3AccessKey').val('');
@@ -1660,10 +1673,10 @@ async function deleteS3Config() {
       $('#s3PublicUrl').val('');
       $('#s3MediaDelivery').dropdown('set selected', 'base64');
       $('#s3RetentionDays').val(30);
-      
+
       // Hide delete button
       $('#deleteS3Config').hide();
-      
+
       $('#modalS3Config').modal('hide');
     } else {
       showError('Failed to delete S3 configuration: ' + (data.error || 'Unknown error'));
@@ -1681,20 +1694,20 @@ async function loadHistoryConfig() {
   const token = getLocalStorageItem('token');
   const myHeaders = new Headers();
   myHeaders.append('token', token);
-  
+
   try {
     // Get user status to check proxy_config
     const res = await fetch(baseUrl + "/session/status", {
       method: "GET",
       headers: myHeaders
     });
-    
+
     if (res.ok) {
       const data = await res.json();
       if (data.code === 200 && data.data && data.data.history) {
         const historyConfig = data.data.history;
         $('#history').val(historyConfig);
-        
+
       } else {
         $('#history').val('0');
       }
@@ -1709,20 +1722,20 @@ async function saveHistoryConfig() {
   const myHeaders = new Headers();
   myHeaders.append('token', token);
   myHeaders.append('Content-Type', 'application/json');
-  
+
   const historyConfig = parseInt($('#history').val());
-  
+
   const config = {
     history: historyConfig,
   };
-  
+
   try {
     const res = await fetch(baseUrl + "/session/history", {
       method: "POST",
       headers: myHeaders,
       body: JSON.stringify(config)
     });
-    
+
     const data = await res.json();
     if (data.success) {
       showSuccess('History configuration saved successfully');
@@ -1741,28 +1754,28 @@ async function loadProxyConfig() {
   const token = getLocalStorageItem('token');
   const myHeaders = new Headers();
   myHeaders.append('token', token);
-  
+
   try {
     // Get user status to check proxy_config
     const res = await fetch(baseUrl + "/session/status", {
       method: "GET",
       headers: myHeaders
     });
-    
+
     if (res.ok) {
       const data = await res.json();
       if (data.code === 200 && data.data && data.data.proxy_config) {
         const proxyConfig = data.data.proxy_config;
         const proxyUrl = proxyConfig.proxy_url || '';
         const enabled = proxyConfig.enabled || false;
-        
+
         // Set checkbox state
         $('#proxyEnabled').prop('checked', enabled);
         $('#proxyEnabledToggle').checkbox(enabled ? 'set checked' : 'set unchecked');
-        
+
         // Set proxy URL
         $('#proxyUrl').val(proxyUrl);
-        
+
         // Show/hide URL field based on enabled state
         if (enabled) {
           $('#proxyUrlField').addClass('show');
@@ -1787,24 +1800,24 @@ async function saveProxyConfig() {
   const myHeaders = new Headers();
   myHeaders.append('token', token);
   myHeaders.append('Content-Type', 'application/json');
-  
+
   const enabled = $('#proxyEnabled').is(':checked');
   const proxyUrl = $('#proxyUrl').val().trim();
-  
+
   // If proxy is disabled, send disable request
   if (!enabled) {
     const config = {
       enable: false,
       proxy_url: ''
     };
-    
+
     try {
       const res = await fetch(baseUrl + "/session/proxy", {
         method: "POST",
         headers: myHeaders,
         body: JSON.stringify(config)
       });
-      
+
       const data = await res.json();
       if (data.success) {
         showSuccess('Proxy disabled successfully');
@@ -1818,31 +1831,31 @@ async function saveProxyConfig() {
     }
     return;
   }
-  
+
   // If enabled, validate proxy URL
   if (!proxyUrl) {
     showError('Proxy URL is required when proxy is enabled');
     return;
   }
-  
+
   // Validate proxy URL has correct protocol
   if (!proxyUrl.startsWith('http://') && !proxyUrl.startsWith('https://') && !proxyUrl.startsWith('socks5://')) {
     showError('Proxy URL must start with http://, https://, or socks5://');
     return;
   }
-  
+
   const config = {
     enable: true,
     proxy_url: proxyUrl
   };
-  
+
   try {
     const res = await fetch(baseUrl + "/session/proxy", {
       method: "POST",
       headers: myHeaders,
       body: JSON.stringify(config)
     });
-    
+
     const data = await res.json();
     if (data.success) {
       showSuccess('Proxy configuration saved successfully');
@@ -1861,18 +1874,18 @@ async function loadHmacConfig() {
   const token = getLocalStorageItem('token');
   const myHeaders = new Headers();
   myHeaders.append('token', token);
-  
+
   try {
     const res = await fetch(baseUrl + "/session/hmac/config", {
       method: "GET",
       headers: myHeaders
     });
-    
+
     if (res.ok) {
       const hmacConfig = await res.json();
-      
+
       $('#hmacKey').val(hmacConfig.hmac_key === '***' ? '' : hmacConfig.hmac_key);
-      
+
       if (hmacConfig.hmac_key === '***') {
         $('#deleteHmacConfig').show();
       } else {
@@ -1895,32 +1908,32 @@ async function saveHmacConfig() {
   const myHeaders = new Headers();
   myHeaders.append('token', token);
   myHeaders.append('Content-Type', 'application/json');
-  
+
   const hmacKey = $('#hmacKey').val().trim();
-  
+
   if (!hmacKey) {
     showError('HMAC key is required');
     return;
   }
-  
+
   if (hmacKey.length < 32) {
     showError('HMAC key must be at least 32 characters long');
     return;
   }
-  
+
   const config = {
     hmac_key: hmacKey
   };
-  
+
   try {
     const res = await fetch(baseUrl + "/session/hmac/config", {
       method: "POST",
       headers: myHeaders,
       body: JSON.stringify(config)
     });
-    
+
     const response = await res.json();
-    
+
     if (res.ok && response.Details) {
       showSuccess('HMAC configuration saved successfully');
       $('#deleteHmacConfig').show();
@@ -1939,32 +1952,32 @@ async function deleteHmacConfig() {
   if (!confirm('Are you sure you want to delete the HMAC configuration? This action cannot be undone.')) {
     return;
   }
-  
+
   const token = getLocalStorageItem('token');
   const myHeaders = new Headers();
   myHeaders.append('token', token);
-  
+
   // Show loading state
   $('#deleteHmacConfig').addClass('loading disabled');
-  
+
   try {
     const res = await fetch(baseUrl + "/session/hmac/config", {
       method: "DELETE",
       headers: myHeaders
     });
-    
+
     const response = await res.json();
-    
+
     // Nova verificação - estrutura direta sem "success"
     if (res.ok && response.Details) {
       showSuccess('HMAC configuration deleted successfully');
-      
+
       // Clear form field
       $('#hmacKey').val('');
-      
+
       // Hide delete button
       $('#deleteHmacConfig').hide();
-      
+
       $('#modalHmacConfig').modal('hide');
     } else {
       showError('Failed to delete HMAC configuration: ' + (response.error || 'Unknown error'));
@@ -1990,7 +2003,7 @@ function toggleHmacKeyVisibility() {
   const input = $('#hmacKey');
   const showBtn = $('#showHmacKey');
   const hideBtn = $('#hideHmacKey');
-  
+
   if (input.attr('type') === 'password') {
     input.attr('type', 'text');
     showBtn.hide();
@@ -2016,7 +2029,7 @@ function toggleHmacKeyVisibilityInstance() {
   const input = $('input[name="hmac_key"]');
   const showBtn = $('#showHmacKeyInstance');
   const hideBtn = $('#hideHmacKeyInstance');
-  
+
   if (input.attr('type') === 'password') {
     input.attr('type', 'text');
     showBtn.hide();
