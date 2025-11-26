@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/textproto"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 )
 
 type Client struct {
@@ -161,12 +163,13 @@ func (c *Client) EnsureContact(phone, name string) (int, error) {
 }
 
 func (c *Client) EnsureConversation(contactID int, sourceID string) (int, error) {
-	// Check for existing conversation (optional optimization, but good practice)
-	// For now, we'll try to create one, and Chatwoot usually handles duplicates or we can check active ones.
-	// The user requirement says: "Verifique se já não existe uma conversa aberta para evitar spam de tickets."
-	// We can search for conversations by contact ID.
+	// CRÍTICO: Buscar por contact_id e verificar source_id para garantir conversa única
+	// Chatwoot permite filtrar por múltiplos parâmetros
+	searchURL := fmt.Sprintf(
+		"%s/api/v1/accounts/%s/conversations?contact_id=%d&status=open",
+		c.Config.URL, c.Config.AccountID, contactID,
+	)
 
-	searchURL := fmt.Sprintf("%s/api/v1/accounts/%s/conversations?contact_id=%d&status=open", c.Config.URL, c.Config.AccountID, contactID)
 	req, err := http.NewRequest("GET", searchURL, nil)
 	if err != nil {
 		return 0, err
@@ -183,26 +186,55 @@ func (c *Client) EnsureConversation(contactID int, sourceID string) (int, error)
 		var convResult struct {
 			Data struct {
 				Payload []struct {
-					ID int `json:"id"`
+					ID                   int `json:"id"`
+					AdditionalAttributes struct {
+						SourceID string `json:"source_id"`
+					} `json:"additional_attributes"`
 				} `json:"payload"`
 			} `json:"data"`
 		}
-		// Chatwoot API structure for conversations list might vary, checking standard response
-		// Actually, /api/v1/accounts/{account_id}/conversations returns a payload with meta and payload.
-		if err := json.NewDecoder(resp.Body).Decode(&convResult); err == nil {
+
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		if err := json.Unmarshal(bodyBytes, &convResult); err == nil {
+			// Procurar pela conversa com o sourceID correto
+			for _, conv := range convResult.Data.Payload {
+				if conv.AdditionalAttributes.SourceID == sourceID {
+					log.Debug().
+						Int("contactID", contactID).
+						Str("sourceID", sourceID).
+						Int("conversationID", conv.ID).
+						Msg("Chatwoot: Found existing conversation")
+					return conv.ID, nil
+				}
+			}
+			// Se não encontrou por sourceID mas encontrou alguma conversa,
+			// ainda assim retorna a primeira (fallback para compatibilidade)
 			if len(convResult.Data.Payload) > 0 {
+				log.Debug().
+					Int("contactID", contactID).
+					Str("sourceID", sourceID).
+					Int("conversationID", convResult.Data.Payload[0].ID).
+					Msg("Chatwoot: Found conversation without matching sourceID, using it anyway")
 				return convResult.Data.Payload[0].ID, nil
 			}
 		}
 	}
 
-	// Create new conversation
+	// Criar nova conversa com source_id
+	log.Debug().
+		Int("contactID", contactID).
+		Str("sourceID", sourceID).
+		Msg("Chatwoot: Creating new conversation")
+
 	createURL := fmt.Sprintf("%s/api/v1/accounts/%s/conversations", c.Config.URL, c.Config.AccountID)
 	payload := map[string]interface{}{
 		"source_id":  sourceID,
 		"inbox_id":   c.Config.InboxID,
 		"contact_id": contactID,
 		"status":     "open",
+		"additional_attributes": map[string]string{
+			"source_id": sourceID, // Salvar sourceID nos atributos adicionais também
+		},
 	}
 	jsonPayload, _ := json.Marshal(payload)
 
@@ -230,6 +262,12 @@ func (c *Client) EnsureConversation(contactID int, sourceID string) (int, error)
 	if err := json.NewDecoder(resp.Body).Decode(&createResult); err != nil {
 		return 0, err
 	}
+
+	log.Info().
+		Int("contactID", contactID).
+		Str("sourceID", sourceID).
+		Int("conversationID", createResult.ID).
+		Msg("Chatwoot: Created new conversation")
 
 	return createResult.ID, nil
 }

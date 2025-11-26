@@ -476,6 +476,23 @@ func (mycli *MyClient) handleChatwootForwarding(evt *events.Message) {
 			contactName = sender
 		}
 
+		// CRÍTICO: sourceID deve ser único por conversa
+		// Usar o JID completo do chat/sender para garantir que cada contato tenha sua própria conversa
+		sourceID := evt.Info.Sender.String() // Formato: 5515996956342@s.whatsapp.net
+		if evt.Info.IsGroup {
+			sourceID = evt.Info.Chat.String()
+		}
+
+		// Log detalhado para debug
+		log.Debug().
+			Str("sender", sender).
+			Str("sourceID", sourceID).
+			Str("contactName", contactName).
+			Str("messageID", evt.Info.ID).
+			Bool("isGroup", evt.Info.IsGroup).
+			Bool("isFromMe", evt.Info.IsFromMe).
+			Msg("Chatwoot: Processing message for forwarding")
+
 		// Formata E.164 e Garante Contato/Conversa
 		// O método EnsureContact já chama formatToE164 internamente
 		contactID, err := cwClient.EnsureContact(sender, contactName)
@@ -484,9 +501,10 @@ func (mycli *MyClient) handleChatwootForwarding(evt *events.Message) {
 			return
 		}
 
-		convID, err := cwClient.EnsureConversation(contactID, sender)
+		// Usa sourceID único para garantir conversa correta
+		convID, err := cwClient.EnsureConversation(contactID, sourceID)
 		if err != nil {
-			log.Error().Err(err).Msg("Chatwoot: Failed to ensure conversation")
+			log.Error().Err(err).Str("sourceID", sourceID).Msg("Chatwoot: Failed to ensure conversation")
 			return
 		}
 
