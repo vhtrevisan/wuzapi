@@ -163,7 +163,7 @@ func (s *server) HandleChatwootWebhook() http.HandlerFunc {
 			msg := &waE2E.Message{
 				Conversation: proto.String(payload.Content),
 			}
-			_, err := client.SendMessage(context.Background(), jid, msg)
+			_, err := client.SendMessage(r.Context(), jid, msg)
 			if err != nil {
 				log.Error().Err(err).Msg("Failed to send text message from Chatwoot")
 				respondJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to send message"})
