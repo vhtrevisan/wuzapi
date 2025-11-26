@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"wuzapi/pkg/chatwoot"
@@ -22,6 +23,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/mdp/qrterminal/v3"
 	"github.com/patrickmn/go-cache"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/skip2/go-qrcode"
 	"go.mau.fi/whatsmeow"
@@ -29,10 +31,15 @@ import (
 	"go.mau.fi/whatsmeow/proto/waCompanionReg"
 	"go.mau.fi/whatsmeow/store"
 	"go.mau.fi/whatsmeow/types"
-	"go.mau.fi/whatsmeow/types/events"
+	"go.mau.fi/whatsmeow/types/events" // Added
 	waLog "go.mau.fi/whatsmeow/util/log"
 	"golang.org/x/net/proxy"
 )
+
+// Global message deduplication cache to prevent duplicate forwards
+var messageDedupeCache sync.Map
+
+var logger zerolog.Logger
 
 // db field declaration as *sqlx.DB
 type MyClient struct {
@@ -352,14 +359,22 @@ func (s *server) connectOnStartup() {
 func (mycli *MyClient) handleChatwootForwarding(evt *events.Message) {
 	// ============ FILTRO SUPREMO ANTI-DUPLICAÇÃO ============
 
-	// 1. Ignora mensagens enviadas pela própria instância (Sync do WhatsApp Web)
-	// CRUCIAL: IsFromMe = true significa que EU enviei a mensagem.
-	// O Chatwoot já sabe (foi ele quem mandou ou eu mandei do celular).
-	// NÃO devemos mandar de volta para o Chatwoot.
-	if evt.Info.IsFromMe {
+	// 1. Deduplicação por Message ID (PRIMEIRA LINHA DE DEFESA!)
+	// WhatsApp pode disparar o mesmo evento múltiplas vezes (retry, criptografia)
+	// O cache impede loops e duplicatas, então podemos processar IsFromMe com segurança
+	messageKey := fmt.Sprintf("%s:%s", mycli.userID, evt.Info.ID)
+	if _, exists := messageDedupeCache.LoadOrStore(messageKey, time.Now()); exists {
+		// Mensagem já foi processada, ignorar
 		return
 	}
+	// Limpar cache após 5 minutos
+	go func(key string) {
+		time.Sleep(5 * time.Minute)
+		messageDedupeCache.Delete(key)
+	}(messageKey)
 
+	// 2. Ignora mensagens de Grupo
+	// Apenas conversas 1:1 são encaminhadas para o Chatwoot
 	if evt.Info.IsGroup {
 		return
 	}
@@ -376,7 +391,7 @@ func (mycli *MyClient) handleChatwootForwarding(evt *events.Message) {
 		return
 	}
 
-	// 4. Validação de Conteúdo (Whitelist Estrita)
+	// 5. Validação de Conteúdo (Whitelist Estrita)
 	// Só processa se tiver um dos tipos de conteúdo suportados
 	hasContent := false
 	if evt.Message.GetConversation() != "" {
@@ -414,7 +429,7 @@ func (mycli *MyClient) handleChatwootForwarding(evt *events.Message) {
 
 	// ============ FIM DOS FILTROS ============
 
-	// 5. Recupera Configuração
+	// 6. Recupera Configuração
 	cwConfig, err := mycli.s.GetChatwootConfig(mycli.userID)
 	if err != nil || cwConfig == nil || cwConfig.URL == "" || cwConfig.InboxID == "" {
 		return
@@ -454,8 +469,14 @@ func (mycli *MyClient) handleChatwootForwarding(evt *events.Message) {
 			return
 		}
 
-		// Prepara Payload
+		// Prepara Payload - msgType Dinâmico
+		// Se a mensagem foi enviada por mim (celular/web), marcar como "outgoing"
+		// para manter histórico completo no Chatwoot
 		msgType := "incoming"
+		if evt.Info.IsFromMe {
+			msgType = "outgoing"
+		}
+
 		var media []byte
 		var mediaFilename, mediaMimeType, content string
 
