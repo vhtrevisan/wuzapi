@@ -20,9 +20,8 @@ func (s *server) GetChatwootConfigHandler() http.HandlerFunc {
 
 		config, err := s.GetChatwootConfig(txtid)
 		if err != nil {
-			// If not found, return empty config or 404?
-			// Let's return empty config with 200 to make frontend easier
-			s.Respond(w, r, http.StatusOK, map[string]interface{}{})
+			// CORREÇÃO AQUI: Retornar string vazia de JSON, não map
+			s.Respond(w, r, http.StatusOK, "{}")
 			return
 		}
 
@@ -97,39 +96,34 @@ func (s *server) SetChatwootConfigHandler() http.HandlerFunc {
 				URL:       config.URL,
 			})
 
-			// 4. Check if inbox already exists, create if not
-			log.Printf("Checking if inbox exists for: %s", userName)
+			// 4. Check if Inbox Exists OR Create New
+			log.Println("Checking for existing inbox...")
 			inboxID, err := chatwootClient.FindInboxByName(userName)
+
 			if err != nil {
-				s.Respond(w, r, http.StatusInternalServerError, fmt.Errorf("failed to search for inbox: %w", err))
-				return
+				log.Printf("Error checking inbox existence (will try to create): %v", err)
 			}
 
-			if inboxID == 0 {
-				// Inbox not found, create new one
-				log.Println("Inbox not found, creating new Chatwoot inbox...")
+			if inboxID > 0 {
+				log.Printf("Found existing inbox with ID: %d", inboxID)
+			} else {
+				log.Println("Creating new Chatwoot inbox...")
 				inboxID, err = chatwootClient.CreateInbox(userName, webhookURL)
 				if err != nil {
 					s.Respond(w, r, http.StatusInternalServerError, fmt.Errorf("failed to create inbox: %w", err))
 					return
 				}
 				log.Printf("Inbox created successfully with ID: %d", inboxID)
-			} else {
-				// Inbox found, reuse existing
-				log.Printf("Found existing inbox with ID: %d, reusing it", inboxID)
 			}
 
-			// Update config with inbox ID (whether found or created)
+			// Update config with new InboxID
 			config.InboxID = fmt.Sprintf("%d", inboxID)
-
-			// Update client config with the InboxID for subsequent calls
 			chatwootClient.Config.InboxID = config.InboxID
 
 			// 5. Create system contact
 			log.Println("Creating system contact...")
 			contactID, err := chatwootClient.CreateContact("Wuzapi System", "+123456")
 			if err != nil {
-				// Log error but don't fail the entire flow
 				log.Printf("Warning: Failed to create system contact: %v", err)
 			} else {
 				log.Printf("System contact created with ID: %d", contactID)
@@ -138,7 +132,6 @@ func (s *server) SetChatwootConfigHandler() http.HandlerFunc {
 				log.Println("Sending initial welcome message...")
 				err = chatwootClient.SendInitMessage(contactID, inboxID)
 				if err != nil {
-					// Log error but don't fail the entire flow - integration is already working
 					log.Printf("Warning: Failed to send initial message: %v", err)
 				} else {
 					log.Println("Initial message sent successfully")
