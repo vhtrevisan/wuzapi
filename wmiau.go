@@ -360,8 +360,9 @@ func (mycli *MyClient) handleChatwootForwarding(evt *events.Message) {
 		return
 	}
 
-	// 2. Ignora mensagens de Grupo (descomente se não quiser suporte a grupos)
-	// if evt.Info.IsGroup { return }
+	if evt.Info.IsGroup {
+		return
+	}
 
 	// 3. Ignora mensagens de Protocolo e Reações (Anti-Duplicação Real)
 	// Mensagens de protocolo (edições, revogações, histórico, chaves de criptografia)
