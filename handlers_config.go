@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"wuzapi/pkg/chatwoot"
 )
@@ -50,9 +51,22 @@ func (s *server) SetChatwootConfigHandler() http.HandlerFunc {
 			return
 		}
 
-		// Get user token and name from database
+		// Get user token and name from database with retry logic
 		var userToken, userName string
-		err := s.db.QueryRow("SELECT token, name FROM users WHERE id=$1", txtid).Scan(&userToken, &userName)
+		var err error
+		maxRetries := 3
+		for i := 0; i < maxRetries; i++ {
+			err = s.db.QueryRow("SELECT token, name FROM users WHERE id=$1", txtid).Scan(&userToken, &userName)
+			if err == nil {
+				break
+			}
+			// If database is busy, wait and retry
+			if err.Error() == "database is locked" && i < maxRetries-1 {
+				time.Sleep(time.Duration(100*(i+1)) * time.Millisecond)
+				continue
+			}
+			break
+		}
 		if err != nil {
 			s.Respond(w, r, http.StatusInternalServerError, fmt.Errorf("failed to get user: %w", err))
 			return
