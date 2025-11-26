@@ -77,12 +77,21 @@ func (s *server) HandleChatwootWebhook() http.HandlerFunc {
 			return
 		}
 
+		// DEBUG: Log the payload to understand what Chatwoot is sending
+		log.Debug().
+			Str("event", payload.Event).
+			Str("messageType", payload.MessageType).
+			Bool("private", payload.Private).
+			Str("content", payload.Content).
+			Msg("Chatwoot webhook payload received")
+
 		// 3. Validation
 		if payload.Event != "message_created" {
 			respondJSON(w, http.StatusOK, map[string]string{"status": "ignored", "reason": "not message_created"})
 			return
 		}
 		if payload.MessageType != "outgoing" {
+			log.Debug().Str("messageType", payload.MessageType).Msg("Ignoring non-outgoing message")
 			respondJSON(w, http.StatusOK, map[string]string{"status": "ignored", "reason": "not outgoing"})
 			return
 		}
