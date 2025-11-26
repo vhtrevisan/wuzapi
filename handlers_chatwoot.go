@@ -35,26 +35,31 @@ type ChatwootWebhookPayload struct {
 	} `json:"contact"`
 }
 
+// respondJSON ensures all webhook responses are valid JSON
+func respondJSON(w http.ResponseWriter, status int, payload map[string]string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(payload)
+}
+
 func (s *server) HandleChatwootWebhook() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// 1. Authentication (Token from Query String)
 		token := r.URL.Query().Get("token")
 		if token == "" {
-			s.Respond(w, r, http.StatusUnauthorized, fmt.Errorf("missing token"))
+			respondJSON(w, http.StatusUnauthorized, map[string]string{"error": "missing token"})
 			return
 		}
 
 		// Validate user/token and get User ID
-		// We can use the existing userinfocache or DB lookup
 		var userID string
 		userinfo, found := userinfocache.Get(token)
 		if found {
 			userID = userinfo.(Values).Get("Id")
 		} else {
-			// Fallback to DB if not in cache
 			err := s.db.QueryRow("SELECT id FROM users WHERE token=$1", token).Scan(&userID)
 			if err != nil {
-				s.Respond(w, r, http.StatusUnauthorized, fmt.Errorf("invalid token"))
+				respondJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid token"})
 				return
 			}
 		}
@@ -63,25 +68,25 @@ func (s *server) HandleChatwootWebhook() http.HandlerFunc {
 		var payload ChatwootWebhookPayload
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			s.Respond(w, r, http.StatusBadRequest, fmt.Errorf("failed to read body"))
+			respondJSON(w, http.StatusBadRequest, map[string]string{"error": "failed to read body"})
 			return
 		}
 		if err := json.Unmarshal(body, &payload); err != nil {
-			s.Respond(w, r, http.StatusBadRequest, fmt.Errorf("invalid json"))
+			respondJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json"})
 			return
 		}
 
 		// 3. Validation
 		if payload.Event != "message_created" {
-			s.Respond(w, r, http.StatusOK, "ignored event")
+			respondJSON(w, http.StatusOK, map[string]string{"status": "ignored", "reason": "not message_created"})
 			return
 		}
 		if payload.MessageType != "outgoing" {
-			s.Respond(w, r, http.StatusOK, "ignored message type")
+			respondJSON(w, http.StatusOK, map[string]string{"status": "ignored", "reason": "not outgoing"})
 			return
 		}
 		if payload.Private {
-			s.Respond(w, r, http.StatusOK, "ignored private message")
+			respondJSON(w, http.StatusOK, map[string]string{"status": "ignored", "reason": "private message"})
 			return
 		}
 
@@ -92,7 +97,7 @@ func (s *server) HandleChatwootWebhook() http.HandlerFunc {
 		}
 		if phone == "" {
 			log.Error().Msg("Chatwoot Webhook: No phone number found")
-			s.Respond(w, r, http.StatusBadRequest, fmt.Errorf("no phone number found"))
+			respondJSON(w, http.StatusBadRequest, map[string]string{"error": "no phone number found"})
 			return
 		}
 
@@ -103,7 +108,7 @@ func (s *server) HandleChatwootWebhook() http.HandlerFunc {
 		// 5. Get WhatsApp Client
 		client := clientManager.GetWhatsmeowClient(userID)
 		if client == nil || !client.IsConnected() {
-			s.Respond(w, r, http.StatusServiceUnavailable, fmt.Errorf("whatsapp client not connected"))
+			respondJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "whatsapp client not connected"})
 			return
 		}
 
@@ -135,7 +140,7 @@ func (s *server) HandleChatwootWebhook() http.HandlerFunc {
 		}()
 
 		// Return success immediately without waiting for delivery
-		s.Respond(w, r, http.StatusOK, `{"status":"success","message":"sent"}`)
+		respondJSON(w, http.StatusOK, map[string]string{"status": "success", "message": "sent"})
 	}
 }
 

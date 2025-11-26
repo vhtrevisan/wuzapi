@@ -353,6 +353,9 @@ func (mycli *MyClient) handleChatwootForwarding(evt *events.Message) {
 	// ============ FILTRO SUPREMO ANTI-DUPLICAÇÃO ============
 
 	// 1. Ignora mensagens enviadas pela própria instância (Sync do WhatsApp Web)
+	// CRUCIAL: IsFromMe = true significa que EU enviei a mensagem.
+	// O Chatwoot já sabe (foi ele quem mandou ou eu mandei do celular).
+	// NÃO devemos mandar de volta para o Chatwoot.
 	if evt.Info.IsFromMe {
 		return
 	}
@@ -361,12 +364,14 @@ func (mycli *MyClient) handleChatwootForwarding(evt *events.Message) {
 	// if evt.Info.IsGroup { return }
 
 	// 3. Ignora mensagens de Protocolo e Reações (Anti-Duplicação Real)
-	// Mensagens de protocolo (edições, revogações, histórico) não devem criar tickets
+	// Mensagens de protocolo (edições, revogações, histórico, chaves de criptografia)
+	// não devem criar tickets no Chatwoot
 	if evt.Message.GetProtocolMessage() != nil ||
 		evt.Message.GetReactionMessage() != nil ||
 		evt.Message.GetKeepInChatMessage() != nil ||
 		evt.Message.GetPollCreationMessage() != nil ||
-		evt.Message.GetPollUpdateMessage() != nil {
+		evt.Message.GetPollUpdateMessage() != nil ||
+		evt.Message.GetSenderKeyDistributionMessage() != nil {
 		return
 	}
 
