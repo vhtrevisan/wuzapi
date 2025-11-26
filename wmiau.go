@@ -385,14 +385,18 @@ func (mycli *MyClient) handleChatwootForwarding(evt *events.Message) {
 	// 3. CRÍTICO: Ignora mensagens enviadas VIA CHATWOOT
 	// Quando enviamos pelo Chatwoot, marcamos no cache. Se detectar aqui, NÃO reencaminhar!
 	// Isso previne o loop: Chatwoot → WhatsApp → handleChatwootForwarding → Chatwoot
-	sender := evt.Info.Sender.User
-	if sender == "" {
-		sender = evt.Info.Chat.User
+
+	// IMPORTANTE: Usamos Chat (destinatário) e NÃO o Sender, pois quando enviamos via Chatwoot
+	// para 5515998570140, o chat é "5515998570140@s.whatsapp.net"
+	chat := evt.Info.Chat.User
+	if chat == "" {
+		// Fallback para sender se chat não estiver disponível
+		chat = evt.Info.Sender.User
 	}
-	chatKey := fmt.Sprintf("%s:%s", mycli.userID, sender)
+	chatKey := fmt.Sprintf("%s:%s", mycli.userID, chat)
 	if _, sentViaChatwoot := chatwootSentCache.Load(chatKey); sentViaChatwoot {
 		// Esta mensagem foi enviada VIA Chatwoot, NÃO reencaminhar!
-		log.Debug().Str("sender", sender).Msg("Chatwoot: Ignoring message sent via Chatwoot webhook")
+		log.Debug().Str("chat", chat).Msg("Chatwoot: Ignoring message sent via Chatwoot webhook")
 		return
 	}
 
