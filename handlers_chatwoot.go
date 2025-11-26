@@ -129,7 +129,7 @@ func (s *server) HandleChatwootWebhook() http.HandlerFunc {
 			}
 		}
 
-		s.Respond(w, r, http.StatusOK, "message sent")
+		s.Respond(w, r, http.StatusOK, `{"status":"success","message":"sent"}`)
 	}
 }
 

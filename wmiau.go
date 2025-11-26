@@ -382,6 +382,12 @@ func (mycli *MyClient) handleChatwootForwarding(evt *events.Message) {
 		contactName = sender
 	}
 
+	// Debug: Log the sender number being used
+	log.Debug().
+		Str("sender", sender).
+		Str("contactName", contactName).
+		Msg("Chatwoot: Creating/finding contact")
+
 	contactID, err := cwClient.EnsureContact(sender, contactName)
 	if err != nil {
 		log.Error().Err(err).Msg("Chatwoot: Failed to ensure contact")
