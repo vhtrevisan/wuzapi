@@ -207,16 +207,6 @@ func (c *Client) EnsureConversation(contactID int, sourceID string) (int, error)
 					return conv.ID, nil
 				}
 			}
-			// Se não encontrou por sourceID mas encontrou alguma conversa,
-			// ainda assim retorna a primeira (fallback para compatibilidade)
-			if len(convResult.Data.Payload) > 0 {
-				log.Debug().
-					Int("contactID", contactID).
-					Str("sourceID", sourceID).
-					Int("conversationID", convResult.Data.Payload[0].ID).
-					Msg("Chatwoot: Found conversation without matching sourceID, using it anyway")
-				return convResult.Data.Payload[0].ID, nil
-			}
 		}
 	}
 
